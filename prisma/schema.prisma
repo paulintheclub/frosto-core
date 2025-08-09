@@ -1,0 +1,226 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Availability {
+  IN_STOCK
+  ON_ORDER
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model Category {
+  id       String     @id @default(cuid())
+  slug     String     @unique
+  parentId String?
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  products Product[]
+
+  brandId String?
+  brand   Brand?  @relation(fields: [brandId], references: [id])
+
+  translations CategoryTranslation[]
+}
+
+model Product {
+  id            String       @id @default(cuid())
+  sku           String       @unique
+  slug          String       @unique
+  mainImage     String
+  gallery       String[]
+  price         Float
+  availability  Availability
+  specImage     String?
+  includesImage String?
+  accessories   String?
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  catalogs     Catalog[]        @relation("CatalogToProduct")
+  comments     Comment[]
+  relatedFrom  RelatedProduct[] @relation("RelatedProducts")
+  relatedTo    RelatedProduct[] @relation("ReverseRelatedProducts")
+  OrderItem    OrderItem[]
+  translations ProductTranslation[]
+}
+
+model RelatedProduct {
+  id        String @id @default(cuid())
+  productId String
+  relatedId String
+
+  product Product @relation("RelatedProducts", fields: [productId], references: [id])
+  related Product @relation("ReverseRelatedProducts", fields: [relatedId], references: [id])
+
+  @@unique([productId, relatedId])
+}
+
+model Brand {
+  id         String     @id @default(cuid())
+  slug       String     @unique
+  logo       String
+  categories Category[]
+
+  translations BrandTranslation[]
+}
+
+model Catalog {
+  id         String    @id @default(cuid())
+  previewImg String?
+  pdfUrl     String
+  products   Product[] @relation("CatalogToProduct")
+
+  translations CatalogTranslation[]
+}
+
+model CompanyInfo {
+  id           Int    @id @default(1)
+  logo         String
+  contactEmail String
+  phone        String
+  address      String
+  openingHours String
+
+  translations CompanyInfoTranslation[]
+}
+
+model User {
+  id       String    @id @default(cuid())
+  email    String    @unique
+  name     String?
+  password String?
+  orders   Order[]
+  comments Comment[]
+}
+
+model Order {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  status         OrderStatus
+  paymentStatus  PaymentStatus @default(PENDING)
+  trackingNumber String?
+  createdAt      DateTime      @default(now())
+  items          OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  parentId  String?
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+}
+
+// Internationalization
+
+model Language {
+  code String @id @unique
+  name String
+
+  productTranslations     ProductTranslation[]
+  categoryTranslations    CategoryTranslation[]
+  brandTranslations       BrandTranslation[]
+  catalogTranslations     CatalogTranslation[]
+  companyInfoTranslations CompanyInfoTranslation[]
+}
+
+model ProductTranslation {
+  id           String  @id @default(cuid())
+  productId    String
+  languageCode String
+  name         String
+  description  String?
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageCode], references: [code], onDelete: Cascade)
+
+  @@unique([productId, languageCode])
+}
+
+model CategoryTranslation {
+  id           String  @id @default(cuid())
+  categoryId   String
+  languageCode String
+  name         String
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageCode], references: [code], onDelete: Cascade)
+
+  @@unique([categoryId, languageCode])
+}
+
+model BrandTranslation {
+  id           String  @id @default(cuid())
+  brandId      String
+  languageCode String
+  name         String
+  description  String?
+
+  brand    Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageCode], references: [code], onDelete: Cascade)
+
+  @@unique([brandId, languageCode])
+}
+
+model CatalogTranslation {
+  id           String  @id @default(cuid())
+  catalogId    String
+  languageCode String
+  name         String
+
+  catalog  Catalog  @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageCode], references: [code], onDelete: Cascade)
+
+  @@unique([catalogId, languageCode])
+}
+
+model CompanyInfoTranslation {
+  id            String      @id @default(cuid())
+  companyInfoId Int
+  languageCode  String
+  name          String
+  description   String
+
+  companyInfo CompanyInfo @relation(fields: [companyInfoId], references: [id], onDelete: Cascade)
+  language    Language    @relation(fields: [languageCode], references: [code], onDelete: Cascade)
+
+  @@unique([companyInfoId, languageCode])
+}
