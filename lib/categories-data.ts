@@ -49,7 +49,7 @@ export const categoriesData: Category[] = [
             price: '€ 2,450.00',
             availability: 'In Stock',
             category: { name: 'Semi-Hermetic Compressors', href: '/categories/components/compressors' },
-            brand: { name: 'Bitzer', href: '/brands/bitzer' },
+            brand: { name: 'Bitzer', href: '/brands-control/bitzer' },
             specImage: '/placeholder.svg?text=Spec+Image',
             includesImage: '/placeholder.svg?text=Includes+Image',
             accessories: [

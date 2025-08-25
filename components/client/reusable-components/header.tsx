@@ -30,7 +30,7 @@ export default function Header() {
   const navigationLinks = [
     { href: '/', label: 'Home' },
     { href: '/categories', label: 'Categories' },
-    { href: '/brands', label: 'Brands' },
+    { href: '/brands-control', label: 'Brands' },
     { href: '/contacts', label: 'Contacts' },
   ]
 

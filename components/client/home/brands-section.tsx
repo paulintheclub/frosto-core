@@ -4,21 +4,21 @@ import { Button } from '@/components/ui/button'
 
 export default function BrandsSection() {
   const brands = [
-    { id: 1, name: 'Bitzer', logo: 'CT', href: '/brands/cooltech', logoUrl: '/img.png' },
-    { id: 2, name: 'Frascold', logo: 'FP', href: '/brands/frostpro', logoUrl: '/img_1.png' },
-    { id: 3, name: 'Copeland', logo: 'AS', href: '/brands/arcticsystems', logoUrl: '/img_2.png' },
-    { id: 4, name: 'Danfoss', logo: 'CM', href: '/brands/chillmaster', logoUrl: '/img_3.png' },
-    { id: 5, name: 'Bock', logo: 'IF', href: '/brands/iceflow', logoUrl: '/img_4.png' },
-    { id: 6, name: 'CryoTech', logo: 'CR', href: '/brands/cryotech' },
-    { id: 7, name: 'FreezePro', logo: 'FZ', href: '/brands/freezepro' },
-    { id: 8, name: 'ColdChain', logo: 'CC', href: '/brands/coldchain' },
-    { id: 9, name: 'ThermalPro', logo: 'TP', href: '/brands/thermalpro' },
-    { id: 10, name: 'FrostGuard', logo: 'FG', href: '/brands/frostguard' },
-    { id: 11, name: 'ChillCore', logo: 'CC', href: '/brands/chillcore' },
-    { id: 12, name: 'IceMaster', logo: 'IM', href: '/brands/icemaster' },
-    { id: 13, name: 'CoolFlow', logo: 'CF', href: '/brands/coolflow' },
-    { id: 14, name: 'ArcticPro', logo: 'AP', href: '/brands/arcticpro' },
-    { id: 15, name: 'FreezeMax', logo: 'FM', href: '/brands/freezemax' },
+    { id: 1, name: 'Bitzer', logo: 'CT', href: '/brands-control/cooltech', logoUrl: '/img.png' },
+    { id: 2, name: 'Frascold', logo: 'FP', href: '/brands-control/frostpro', logoUrl: '/img_1.png' },
+    { id: 3, name: 'Copeland', logo: 'AS', href: '/brands-control/arcticsystems', logoUrl: '/img_2.png' },
+    { id: 4, name: 'Danfoss', logo: 'CM', href: '/brands-control/chillmaster', logoUrl: '/img_3.png' },
+    { id: 5, name: 'Bock', logo: 'IF', href: '/brands-control/iceflow', logoUrl: '/img_4.png' },
+    { id: 6, name: 'CryoTech', logo: 'CR', href: '/brands-control/cryotech' },
+    { id: 7, name: 'FreezePro', logo: 'FZ', href: '/brands-control/freezepro' },
+    { id: 8, name: 'ColdChain', logo: 'CC', href: '/brands-control/coldchain' },
+    { id: 9, name: 'ThermalPro', logo: 'TP', href: '/brands-control/thermalpro' },
+    { id: 10, name: 'FrostGuard', logo: 'FG', href: '/brands-control/frostguard' },
+    { id: 11, name: 'ChillCore', logo: 'CC', href: '/brands-control/chillcore' },
+    { id: 12, name: 'IceMaster', logo: 'IM', href: '/brands-control/icemaster' },
+    { id: 13, name: 'CoolFlow', logo: 'CF', href: '/brands-control/coolflow' },
+    { id: 14, name: 'ArcticPro', logo: 'AP', href: '/brands-control/arcticpro' },
+    { id: 15, name: 'FreezeMax', logo: 'FM', href: '/brands-control/freezemax' },
   ]
 
   return (

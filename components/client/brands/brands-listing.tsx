@@ -20,52 +20,52 @@ export default function BrandsListing() {
   const itemsPerPage = 20
 
   const brands = [
-    { id: 1, name: 'Bitzer', logo: 'CT', href: '/brands/cooltech', logoUrl: '/img.png' },
-    { id: 2, name: 'Frascold', logo: 'FP', href: '/brands/frostpro', logoUrl: '/img_1.png' },
-    { id: 3, name: 'Copeland', logo: 'AS', href: '/brands/arcticsystems', logoUrl: '/img_2.png' },
-    { id: 4, name: 'Danfoss', logo: 'CM', href: '/brands/chillmaster', logoUrl: '/img_3.png' },
-    { id: 5, name: 'Bock', logo: 'IF', href: '/brands/iceflow', logoUrl: '/img_4.png' },
-    { id: 6, name: 'CryoTech', logo: 'CR', href: '/brands/cryotech' },
-    { id: 7, name: 'FreezePro', logo: 'FZ', href: '/brands/freezepro' },
-    { id: 8, name: 'ColdChain', logo: 'CC', href: '/brands/coldchain' },
-    { id: 9, name: 'ThermalPro', logo: 'TP', href: '/brands/thermalpro' },
-    { id: 10, name: 'FrostGuard', logo: 'FG', href: '/brands/frostguard' },
-    { id: 11, name: 'ChillCore', logo: 'CC', href: '/brands/chillcore' },
-    { id: 12, name: 'IceMaster', logo: 'IM', href: '/brands/icemaster' },
-    { id: 13, name: 'CoolFlow', logo: 'CF', href: '/brands/coolflow' },
-    { id: 14, name: 'ArcticPro', logo: 'AP', href: '/brands/arcticpro' },
-    { id: 15, name: 'FreezeMax', logo: 'FM', href: '/brands/freezemax' },
-    { id: 16, name: 'ColdWave', logo: 'CW', href: '/brands/coldwave' },
-    { id: 17, name: 'IceTech', logo: 'IT', href: '/brands/icetech' },
-    { id: 18, name: 'FrostLine', logo: 'FL', href: '/brands/frostline' },
-    { id: 19, name: 'ChillWave', logo: 'CW', href: '/brands/chillwave' },
-    { id: 20, name: 'CoolMax', logo: 'CM', href: '/brands/coolmax' },
-    { id: 21, name: 'ArcticFlow', logo: 'AF', href: '/brands/arcticflow' },
-    { id: 22, name: 'FreezeCore', logo: 'FC', href: '/brands/freezecore' },
-    { id: 23, name: 'IceGuard', logo: 'IG', href: '/brands/iceguard' },
-    { id: 24, name: 'ColdMax', logo: 'CM', href: '/brands/coldmax' },
-    { id: 25, name: 'ThermalFlow', logo: 'TF', href: '/brands/thermalflow' },
-    { id: 26, name: 'FrostMax', logo: 'FM', href: '/brands/frostmax' },
-    { id: 27, name: 'ChillTech', logo: 'CT', href: '/brands/chilltech' },
-    { id: 28, name: 'IceCore', logo: 'IC', href: '/brands/icecore' },
-    { id: 29, name: 'CoolGuard', logo: 'CG', href: '/brands/coolguard' },
-    { id: 30, name: 'ArcticMax', logo: 'AM', href: '/brands/arcticmax' },
-    { id: 31, name: 'FreezeTech', logo: 'FT', href: '/brands/freezetech' },
-    { id: 32, name: 'ColdCore', logo: 'CC', href: '/brands/coldcore' },
-    { id: 33, name: 'ThermalMax', logo: 'TM', href: '/brands/thermalmax' },
-    { id: 34, name: 'IceWave', logo: 'IW', href: '/brands/icewave' },
-    { id: 35, name: 'FrostFlow', logo: 'FF', href: '/brands/frostflow' },
-    { id: 36, name: 'ChillMax', logo: 'CM', href: '/brands/chillmax' },
+    { id: 1, name: 'Bitzer', logo: 'CT', href: '/brands-control/cooltech', logoUrl: '/img.png' },
+    { id: 2, name: 'Frascold', logo: 'FP', href: '/brands-control/frostpro', logoUrl: '/img_1.png' },
+    { id: 3, name: 'Copeland', logo: 'AS', href: '/brands-control/arcticsystems', logoUrl: '/img_2.png' },
+    { id: 4, name: 'Danfoss', logo: 'CM', href: '/brands-control/chillmaster', logoUrl: '/img_3.png' },
+    { id: 5, name: 'Bock', logo: 'IF', href: '/brands-control/iceflow', logoUrl: '/img_4.png' },
+    { id: 6, name: 'CryoTech', logo: 'CR', href: '/brands-control/cryotech' },
+    { id: 7, name: 'FreezePro', logo: 'FZ', href: '/brands-control/freezepro' },
+    { id: 8, name: 'ColdChain', logo: 'CC', href: '/brands-control/coldchain' },
+    { id: 9, name: 'ThermalPro', logo: 'TP', href: '/brands-control/thermalpro' },
+    { id: 10, name: 'FrostGuard', logo: 'FG', href: '/brands-control/frostguard' },
+    { id: 11, name: 'ChillCore', logo: 'CC', href: '/brands-control/chillcore' },
+    { id: 12, name: 'IceMaster', logo: 'IM', href: '/brands-control/icemaster' },
+    { id: 13, name: 'CoolFlow', logo: 'CF', href: '/brands-control/coolflow' },
+    { id: 14, name: 'ArcticPro', logo: 'AP', href: '/brands-control/arcticpro' },
+    { id: 15, name: 'FreezeMax', logo: 'FM', href: '/brands-control/freezemax' },
+    { id: 16, name: 'ColdWave', logo: 'CW', href: '/brands-control/coldwave' },
+    { id: 17, name: 'IceTech', logo: 'IT', href: '/brands-control/icetech' },
+    { id: 18, name: 'FrostLine', logo: 'FL', href: '/brands-control/frostline' },
+    { id: 19, name: 'ChillWave', logo: 'CW', href: '/brands-control/chillwave' },
+    { id: 20, name: 'CoolMax', logo: 'CM', href: '/brands-control/coolmax' },
+    { id: 21, name: 'ArcticFlow', logo: 'AF', href: '/brands-control/arcticflow' },
+    { id: 22, name: 'FreezeCore', logo: 'FC', href: '/brands-control/freezecore' },
+    { id: 23, name: 'IceGuard', logo: 'IG', href: '/brands-control/iceguard' },
+    { id: 24, name: 'ColdMax', logo: 'CM', href: '/brands-control/coldmax' },
+    { id: 25, name: 'ThermalFlow', logo: 'TF', href: '/brands-control/thermalflow' },
+    { id: 26, name: 'FrostMax', logo: 'FM', href: '/brands-control/frostmax' },
+    { id: 27, name: 'ChillTech', logo: 'CT', href: '/brands-control/chilltech' },
+    { id: 28, name: 'IceCore', logo: 'IC', href: '/brands-control/icecore' },
+    { id: 29, name: 'CoolGuard', logo: 'CG', href: '/brands-control/coolguard' },
+    { id: 30, name: 'ArcticMax', logo: 'AM', href: '/brands-control/arcticmax' },
+    { id: 31, name: 'FreezeTech', logo: 'FT', href: '/brands-control/freezetech' },
+    { id: 32, name: 'ColdCore', logo: 'CC', href: '/brands-control/coldcore' },
+    { id: 33, name: 'ThermalMax', logo: 'TM', href: '/brands-control/thermalmax' },
+    { id: 34, name: 'IceWave', logo: 'IW', href: '/brands-control/icewave' },
+    { id: 35, name: 'FrostFlow', logo: 'FF', href: '/brands-control/frostflow' },
+    { id: 36, name: 'ChillMax', logo: 'CM', href: '/brands-control/chillmax' },
   ]
 
-  // Filter brands based on search term
+  // Filter brands-control based on search term
   const filteredBrands = useMemo(() => {
     return brands.filter(brand =>
       brand.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [searchTerm])
 
-  // Sort brands
+  // Sort brands-control
   const sortedBrands = useMemo(() => {
     const sorted = [...filteredBrands]
     switch (sortBy) {
