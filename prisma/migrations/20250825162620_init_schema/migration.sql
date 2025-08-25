@@ -2,10 +2,16 @@
 CREATE TYPE "public"."Availability" AS ENUM ('IN_STOCK', 'ON_ORDER');
 
 -- CreateEnum
-CREATE TYPE "public"."OrderStatus" AS ENUM ('PENDING', 'PAID', 'SHIPPED', 'CANCELLED');
+CREATE TYPE "public"."OrderStatus" AS ENUM ('PENDING', 'INPROGRESS', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURNED');
 
 -- CreateEnum
 CREATE TYPE "public"."PaymentStatus" AS ENUM ('PENDING', 'PAID', 'FAILED', 'REFUNDED');
+
+-- CreateEnum
+CREATE TYPE "public"."UserRole" AS ENUM ('USER', 'ADMIN');
+
+-- CreateEnum
+CREATE TYPE "public"."CommentType" AS ENUM ('REQUEST', 'REPLY');
 
 -- CreateTable
 CREATE TABLE "public"."Category" (
@@ -25,10 +31,16 @@ CREATE TABLE "public"."Product" (
     "mainImage" TEXT NOT NULL,
     "gallery" TEXT[],
     "price" DOUBLE PRECISION NOT NULL,
+    "isDiscounted" BOOLEAN NOT NULL DEFAULT false,
+    "discountPrice" DOUBLE PRECISION,
     "availability" "public"."Availability" NOT NULL,
-    "specImage" TEXT,
-    "includesImage" TEXT,
-    "accessories" TEXT,
+    "mainChar" TEXT,
+    "techCharImage" TEXT,
+    "expCharImage" TEXT,
+    "sizeConnectionsImage" TEXT,
+    "accessoriesImage" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "categoryId" TEXT NOT NULL,
 
     CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
@@ -48,6 +60,7 @@ CREATE TABLE "public"."Brand" (
     "id" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "logo" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
 
     CONSTRAINT "Brand_pkey" PRIMARY KEY ("id")
 );
@@ -65,10 +78,12 @@ CREATE TABLE "public"."Catalog" (
 CREATE TABLE "public"."CompanyInfo" (
     "id" INTEGER NOT NULL DEFAULT 1,
     "logo" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
     "contactEmail" TEXT NOT NULL,
     "phone" TEXT NOT NULL,
     "address" TEXT NOT NULL,
     "openingHours" TEXT NOT NULL,
+    "certificates" TEXT[],
 
     CONSTRAINT "CompanyInfo_pkey" PRIMARY KEY ("id")
 );
@@ -79,6 +94,9 @@ CREATE TABLE "public"."User" (
     "email" TEXT NOT NULL,
     "name" TEXT,
     "password" TEXT,
+    "role" "public"."UserRole" NOT NULL DEFAULT 'USER',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -86,11 +104,15 @@ CREATE TABLE "public"."User" (
 -- CreateTable
 CREATE TABLE "public"."Order" (
     "id" TEXT NOT NULL,
+    "orderNumber" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "status" "public"."OrderStatus" NOT NULL,
+    "paymentMethod" TEXT NOT NULL,
     "paymentStatus" "public"."PaymentStatus" NOT NULL DEFAULT 'PENDING',
+    "shippingAddress" TEXT NOT NULL,
     "trackingNumber" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
 );
@@ -109,12 +131,30 @@ CREATE TABLE "public"."OrderItem" (
 CREATE TABLE "public"."Comment" (
     "id" TEXT NOT NULL,
     "content" TEXT NOT NULL,
+    "commentType" "public"."CommentType" NOT NULL DEFAULT 'REQUEST',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "userId" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
     "parentId" TEXT,
 
     CONSTRAINT "Comment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."MonthlyStats" (
+    "id" TEXT NOT NULL,
+    "year" INTEGER NOT NULL,
+    "month" INTEGER NOT NULL,
+    "totalOrderCount" INTEGER NOT NULL,
+    "totalOrderSum" DOUBLE PRECISION NOT NULL,
+    "newUsersCount" INTEGER NOT NULL,
+    "commentsCount" INTEGER NOT NULL,
+    "totalProductCount" INTEGER NOT NULL,
+    "totalCategoryCount" INTEGER NOT NULL,
+    "totalBrandCount" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "MonthlyStats_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -141,7 +181,8 @@ CREATE TABLE "public"."CategoryTranslation" (
     "id" TEXT NOT NULL,
     "categoryId" TEXT NOT NULL,
     "languageCode" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "description" TEXT,
 
     CONSTRAINT "CategoryTranslation_pkey" PRIMARY KEY ("id")
 );
@@ -151,7 +192,6 @@ CREATE TABLE "public"."BrandTranslation" (
     "id" TEXT NOT NULL,
     "brandId" TEXT NOT NULL,
     "languageCode" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
     "description" TEXT,
 
     CONSTRAINT "BrandTranslation_pkey" PRIMARY KEY ("id")
@@ -172,7 +212,6 @@ CREATE TABLE "public"."CompanyInfoTranslation" (
     "id" TEXT NOT NULL,
     "companyInfoId" INTEGER NOT NULL,
     "languageCode" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
 
     CONSTRAINT "CompanyInfoTranslation_pkey" PRIMARY KEY ("id")
@@ -203,6 +242,12 @@ CREATE UNIQUE INDEX "Brand_slug_key" ON "public"."Brand"("slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "public"."User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Order_orderNumber_key" ON "public"."Order"("orderNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MonthlyStats_year_month_key" ON "public"."MonthlyStats"("year", "month");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Language_code_key" ON "public"."Language"("code");
