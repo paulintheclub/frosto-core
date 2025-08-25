@@ -17,9 +17,11 @@ enum Availability {
 
 enum OrderStatus {
   PENDING
-  PAID
+  INPROGRESS
   SHIPPED
+  DELIVERED
   CANCELLED
+  RETURNED
 }
 
 enum PaymentStatus {
@@ -27,6 +29,16 @@ enum PaymentStatus {
   PAID
   FAILED
   REFUNDED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum CommentType {
+  REQUEST
+  REPLY
 }
 
 model Category {
@@ -44,24 +56,31 @@ model Category {
 }
 
 model Product {
-  id            String       @id @default(cuid())
-  sku           String       @unique
-  slug          String       @unique
-  mainImage     String
-  gallery       String[]
-  price         Float
-  availability  Availability
-  specImage     String?
-  includesImage String?
-  accessories   String?
+  id                   String       @id @default(cuid())
+  sku                  String       @unique
+  slug                 String       @unique
+  mainImage            String
+  gallery              String[]
+  price                Float
+  isDiscounted         Boolean      @default(false)
+  discountPrice        Float?
+  availability         Availability
+  mainChar             String?
+  techCharImage        String?
+  expCharImage         String?
+  sizeConnectionsImage String?
+  accessoriesImage     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
 
-  catalogs     Catalog[]        @relation("CatalogToProduct")
+  catalogs     Catalog[]            @relation("CatalogToProduct")
   comments     Comment[]
-  relatedFrom  RelatedProduct[] @relation("RelatedProducts")
-  relatedTo    RelatedProduct[] @relation("ReverseRelatedProducts")
+  relatedFrom  RelatedProduct[]     @relation("RelatedProducts")
+  relatedTo    RelatedProduct[]     @relation("ReverseRelatedProducts")
   OrderItem    OrderItem[]
   translations ProductTranslation[]
 }
@@ -81,6 +100,7 @@ model Brand {
   id         String     @id @default(cuid())
   slug       String     @unique
   logo       String
+  name       String
   categories Category[]
 
   translations BrandTranslation[]
@@ -96,34 +116,45 @@ model Catalog {
 }
 
 model CompanyInfo {
-  id           Int    @id @default(1)
+  id           Int      @id @default(1)
   logo         String
+  name         String
   contactEmail String
   phone        String
   address      String
   openingHours String
+  certificates String[]
 
   translations CompanyInfoTranslation[]
 }
 
 model User {
-  id       String    @id @default(cuid())
-  email    String    @unique
+  id       String   @id @default(cuid())
+  email    String   @unique
   name     String?
   password String?
+  role     UserRole @default(USER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   orders   Order[]
   comments Comment[]
 }
 
 model Order {
-  id             String        @id @default(cuid())
-  userId         String
-  user           User          @relation(fields: [userId], references: [id])
-  status         OrderStatus
-  paymentStatus  PaymentStatus @default(PENDING)
-  trackingNumber String?
-  createdAt      DateTime      @default(now())
-  items          OrderItem[]
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  status          OrderStatus
+  paymentMethod   String
+  paymentStatus   PaymentStatus @default(PENDING)
+  shippingAddress String
+  trackingNumber  String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  items           OrderItem[]
 }
 
 model OrderItem {
@@ -136,17 +167,36 @@ model OrderItem {
 }
 
 model Comment {
-  id        String   @id @default(cuid())
-  content   String
+  id          String      @id @default(cuid())
+  content     String
+  commentType CommentType @default(REQUEST)
+  createdAt   DateTime    @default(now())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  productId   String
+  product     Product     @relation(fields: [productId], references: [id])
+  parentId    String?
+  parent      Comment?    @relation("CommentReplies", fields: [parentId], references: [id])
+  replies     Comment[]   @relation("CommentReplies")
+}
+
+model MonthlyStats {
+  id    String @id @default(cuid())
+  year  Int
+  month Int
+
+  totalOrderCount Int
+  totalOrderSum   Float
+  newUsersCount   Int
+  commentsCount   Int
+
+  totalProductCount  Int
+  totalCategoryCount Int
+  totalBrandCount    Int
+
   createdAt DateTime @default(now())
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  parentId  String?
-  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
-  replies   Comment[] @relation("CommentReplies")
+  @@unique([year, month])
 }
 
 // Internationalization
@@ -179,7 +229,8 @@ model CategoryTranslation {
   id           String  @id @default(cuid())
   categoryId   String
   languageCode String
-  name         String
+  type         String
+  description  String?
 
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   language Language @relation(fields: [languageCode], references: [code], onDelete: Cascade)
@@ -191,7 +242,6 @@ model BrandTranslation {
   id           String  @id @default(cuid())
   brandId      String
   languageCode String
-  name         String
   description  String?
 
   brand    Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
@@ -201,7 +251,7 @@ model BrandTranslation {
 }
 
 model CatalogTranslation {
-  id           String  @id @default(cuid())
+  id           String @id @default(cuid())
   catalogId    String
   languageCode String
   name         String
@@ -213,10 +263,9 @@ model CatalogTranslation {
 }
 
 model CompanyInfoTranslation {
-  id            String      @id @default(cuid())
+  id            String @id @default(cuid())
   companyInfoId Int
   languageCode  String
-  name          String
   description   String
 
   companyInfo CompanyInfo @relation(fields: [companyInfoId], references: [id], onDelete: Cascade)
