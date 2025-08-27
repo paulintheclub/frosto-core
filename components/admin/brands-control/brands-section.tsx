@@ -7,83 +7,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Search, Plus, Edit, Trash2, Tag, Upload } from "lucide-react"
+import { Search, Plus, Edit, Trash2, Tag, Upload, MoreHorizontal } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import {StatCard} from "@/components/admin/reusable-components/stat-card";
-
-// Mock brands-control data
-const mockBrands = [
-  {
-    id: "1",
-    name: "Apple",
-    logo: "/placeholder.svg?height=60&width=60",
-    productsCount: 25,
-    createdDate: "2024-01-15",
-  },
-  {
-    id: "2",
-    name: "Samsung",
-    logo: "/placeholder.svg?height=60&width=60",
-    productsCount: 18,
-    createdDate: "2024-01-20",
-  },
-  {
-    id: "3",
-    name: "Nike",
-    logo: "/placeholder.svg?height=60&width=60",
-    productsCount: 42,
-    createdDate: "2024-02-01",
-  },
-  {
-    id: "4",
-    name: "Adidas",
-    logo: "/placeholder.svg?height=60&width=60",
-    productsCount: 35,
-    createdDate: "2024-02-10",
-  },
-  {
-    id: "5",
-    name: "Sony",
-    logo: "/placeholder.svg?height=60&width=60",
-    productsCount: 8,
-    createdDate: "2024-03-01",
-  },
-]
-
+import { StatCard } from "@/components/admin/reusable-components/stat-card";
+import { DataTable } from "@/components/ui/data-table";
+import { mockBrands } from "@/components/admin/brands-control/mockData"
+import {getBrandColumns} from "@/components/admin/brands-control/columns";
+import {Brand} from "@/components/admin/brands-control/columns";
 
 
 
 export function BrandsSection() {
   const [brands, setBrands] = useState(mockBrands)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [editingBrand, setEditingBrand] = useState<any>(null)
   const [isAddingBrand, setIsAddingBrand] = useState(false)
 
-  const filteredBrands = brands.filter((brand) => brand.name.toLowerCase().includes(searchTerm.toLowerCase()))
 
-  const handleSelectBrand = (brandId: string) => {
-    setSelectedBrands((prev) => (prev.includes(brandId) ? prev.filter((id) => id !== brandId) : [...prev, brandId]))
+  const handleDeleteBrand = (brand: Brand) => {
+    setBrands((prev) => prev.filter((b) => b.id !== brand.id))
   }
 
-  const handleSelectAll = () => {
-    if (selectedBrands.length === filteredBrands.length) {
-      setSelectedBrands([])
-    } else {
-      setSelectedBrands(filteredBrands.map((brand) => brand.id))
-    }
-  }
-
-  const handleDeleteBrand = (brandId: string) => {
-    setBrands((prev) => prev.filter((brand) => brand.id !== brandId))
-  }
-
-  const handleBulkDelete = () => {
-    setBrands((prev) => prev.filter((brand) => !selectedBrands.includes(brand.id)))
-    setSelectedBrands([])
-  }
 
   const totalBrands = brands.length
   const totalProducts = brands.reduce((sum, brand) => sum + brand.productsCount, 0)
@@ -128,16 +73,7 @@ export function BrandsSection() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Controls */}
-          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Пошук брендів..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-end">
 
             <Button onClick={() => setIsAddingBrand(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -145,71 +81,13 @@ export function BrandsSection() {
             </Button>
           </div>
 
-          {/* Bulk Actions */}
-          {selectedBrands.length > 0 && (
-            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-              <span className="text-sm text-muted-foreground">Обрано {selectedBrands.length} брендів:</span>
-              <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
-                <Trash2 className="h-4 w-4 mr-1" />
-                Видалити
-              </Button>
-            </div>
-          )}
 
-          {/* Brands Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredBrands.length > 0 ? (
-              filteredBrands.map((brand) => (
-                <Card key={brand.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
-                      <Checkbox
-                        checked={selectedBrands.includes(brand.id)}
-                        onCheckedChange={() => handleSelectBrand(brand.id)}
-                      />
+          {/* Brands Table */}
+          <DataTable
+              columns={getBrandColumns(setEditingBrand, handleDeleteBrand)}
+              data={brands}
+          />
 
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={brand.logo || "/placeholder.svg"} />
-                        <AvatarFallback>{brand.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold">{brand.name}</h3>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => setEditingBrand(brand)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteBrand(brand.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="bg-muted/50 rounded-md px-2 py-1 inline-block">
-                          <span className="text-sm font-medium">{brand.productsCount} продуктів</span>
-                        </div>
-
-                        <p className="text-xs text-muted-foreground">Створено: {brand.createdDate}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="col-span-full py-8 text-center text-muted-foreground">Немає брендів для відображення</div>
-            )}
-          </div>
         </CardContent>
       </Card>
 

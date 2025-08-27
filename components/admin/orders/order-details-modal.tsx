@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import {useEffect, useState} from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +18,7 @@ interface OrderDetailsModalProps {
 
 export function OrderDetailsModal({ order, isOpen, onClose, onStatusChange }: OrderDetailsModalProps) {
   const [currentStatus, setCurrentStatus] = useState(order?.status || "pending")
+
 
   const handleStatusChange = (newStatus: string) => {
     setCurrentStatus(newStatus)
@@ -77,7 +78,7 @@ export function OrderDetailsModal({ order, isOpen, onClose, onStatusChange }: Or
   if (!order) return null
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <div className="flex items-center justify-between">

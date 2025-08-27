@@ -1,0 +1,73 @@
+import type { TableItem } from "@/components/admin/product-categories/products-categories-section" // путь к интерфейсу
+
+export const mockData: TableItem[] = [
+    {
+        id: "1",
+        type: "category",
+        name: "Електроніка",
+        description: "Електронні товари та пристрої",
+        subcategoriesCount: 3,
+        brand: "",
+        isEndCategory: false,
+        level: 1,
+        children: [
+            {
+                id: "1-1",
+                type: "category",
+                name: "Смартфони",
+                description: "Мобільні телефони та аксесуари",
+                subcategoriesCount: 0,
+                brand: "",
+                isEndCategory: true,
+                level: 2,
+                children: [
+                    {
+                        id: "1-1-1",
+                        type: "product",
+                        name: "iPhone 15 Pro",
+                        description: "Новий iPhone з титановим корпусом",
+                        subcategoriesCount: 0,
+                        brand: "Apple",
+                        isEndCategory: true,
+                        level: 3,
+                        children: [],
+                    },
+                ],
+            },
+            {
+                id: "1-2",
+                type: "category",
+                name: "Ноутбуки",
+                description: "Портативні комп'ютери",
+                subcategoriesCount: 0,
+                brand: "",
+                isEndCategory: true,
+                level: 2,
+                children: [],
+            },
+        ],
+    },
+    {
+        id: "2",
+        type: "category",
+        name: "Одяг",
+        description: "Чоловічий та жіночий одяг",
+        subcategoriesCount: 2,
+        brand: "",
+        isEndCategory: false,
+        level: 1,
+        children: [
+            {
+                id: "2-1",
+                type: "category",
+                name: "Чоловічий одяг",
+                description: "Одяг для чоловіків",
+                subcategoriesCount: 0,
+                brand: "",
+                isEndCategory: true,
+                level: 2,
+                children: [],
+            },
+        ],
+    },
+]
