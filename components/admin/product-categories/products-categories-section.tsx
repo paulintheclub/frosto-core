@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -12,12 +12,14 @@ import {
   Tag,
   TrendingUp,
 } from "lucide-react"
-import { ProductsTable } from "./products-table"
+import { HierarchyTable } from "./hierarchy-table"
 import { FilterPopup } from "./filter-popup"
 import { ProductModal } from "./product-modal"
 import { StatCard } from "@/components/admin/reusable-components/stat-card"
 import { CategoryModal } from "@/components/admin/product-categories/category-modal"
-import { mockData } from "@/components/admin/product-categories/mockData"
+import { trpc } from "@/utils/trpc"
+import { TableItem } from "@/types/table"
+import {useLanguage} from "@/context/language-context";
 
 interface StatItem {
   label: string
@@ -28,27 +30,31 @@ interface StatItem {
   iconColor: string
 }
 
-export interface TableItem {
-  id: string
-  type: "category" | "product"
-  name: string
-  description: string
-  subcategoriesCount: number
-  brand: string
-  isEndCategory: boolean
-  level: number
-  children: TableItem[]
-}
 
 export function ProductsCategoriesSection() {
   const [searchTerm, setSearchTerm] = useState("")
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [isFilterPopupOpen, setIsFilterPopupOpen] = useState(false)
   const [editItem, setEditItem] = useState<TableItem | null>(null)
-  const [data, setData] = useState<TableItem[]>(mockData)
+  const [data, setData] = useState<TableItem[]>([])
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<"add" | "edit">("add")
+  const { language } = useLanguage()
+
+  const { data: rootCategories, refetch } = trpc.adminCategory.getRootCategories.useQuery(
+      { lang: language }
+  )
+
+  useEffect(() => {
+    refetch()
+  }, [language])
+
+  useEffect(() => {
+    if (rootCategories) {
+      setData(rootCategories)
+    }
+  }, [rootCategories])
 
   const stats: StatItem[] = [
     {
@@ -91,24 +97,6 @@ export function ProductsCategoriesSection() {
     setExpandedItems(newExpanded)
   }
 
-  const expandAll = () => {
-    const allIds = new Set<string>()
-    const collectIds = (items: TableItem[]) => {
-      items.forEach((item) => {
-        if (item.children?.length > 0) {
-          allIds.add(item.id)
-          collectIds(item.children)
-        }
-      })
-    }
-    collectIds(data)
-    setExpandedItems(allIds)
-  }
-
-  const collapseAll = () => {
-    setExpandedItems(new Set())
-  }
-
   const handleEdit = (item: TableItem) => {
     setEditItem(item)
     setModalMode("edit")
@@ -128,7 +116,6 @@ export function ProductsCategoriesSection() {
   }
 
   const handleDelete = (id: string) => {
-    // TODO: В будущем здесь разместить вызов TRPC-мутации deleteItem
     console.log("Delete item:", id)
   }
 
@@ -154,7 +141,6 @@ export function ProductsCategoriesSection() {
           </div>
         </div>
 
-        {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-white p-4 rounded-lg border border-border">
           <div className="flex flex-col sm:flex-row gap-2 flex-1">
             <div className="relative flex-1 max-w-md">
@@ -174,24 +160,17 @@ export function ProductsCategoriesSection() {
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={expandAll}>
-              Розгорнути все
-            </Button>
-            <Button variant="outline" size="sm" onClick={collapseAll}>
-              Згорнути все
-            </Button>
-          </div>
         </div>
 
-        {/* Table */}
-        <ProductsTable
-            data={data}
+        <HierarchyTable
+            rootCategories={rootCategories}
             searchTerm={searchTerm}
             expandedItems={expandedItems}
             onToggleExpanded={toggleExpanded}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onAddSubcategory={handleAddCategory}
+            onAddProduct={handleAddProduct}
         />
 
         {isProductModalOpen && (

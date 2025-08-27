@@ -1,29 +1,15 @@
-import { fetchRequestHandler } from '@trpc/server/adapters/fetch'
-import { type NextRequest } from 'next/server'
+// app/api/trpc/[trpc]/route.ts
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch"
+import { appRouter } from "@/server/api/route"
+import { createTRPCContext } from "@/server/api/trpc/context"
 
-import { appRouter } from '@/lib/trpc/root'
-import { createTRPCContext } from '@/lib/trpc/server'
-
-/**
- * API роут для обработки всех tRPC запросов
- * 
- * Этот файл обрабатывает все HTTP запросы к /api/trpc/*
- * и перенаправляет их к соответствующим tRPC процедурам
- */
-const handler = (req: NextRequest) =>
-  fetchRequestHandler({
-    endpoint: '/api/trpc',
-    req,
-    router: appRouter,
-    createContext: createTRPCContext,
-    onError:
-      process.env.NODE_ENV === 'development'
-        ? ({ path, error }) => {
-            console.error(
-              `❌ tRPC failed on ${path ?? '<no-path>'}: ${error.message}`
-            )
-          }
-        : undefined,
-  })
+const handler = (req: Request) => {
+    return fetchRequestHandler({
+        endpoint: "/api/trpc",
+        req,
+        router: appRouter,
+        createContext: () => createTRPCContext({ req, res: null }),
+    })
+}
 
 export { handler as GET, handler as POST }

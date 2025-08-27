@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
+import {TrpcProvider} from "@/app/providers/trpc-provider";
+import { LanguageProvider } from '@/context/language-context';
 
 export const metadata: Metadata = {
   title: 'v0 App',
@@ -25,7 +27,11 @@ html {
 }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body>
+      <LanguageProvider>
+        <TrpcProvider>{children}</TrpcProvider>
+      </LanguageProvider>
+      </body>
     </html>
   )
 }
