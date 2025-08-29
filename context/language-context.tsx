@@ -2,18 +2,18 @@
 "use client"
 import { createContext, useContext, useState } from "react"
 
-type Language = "en" | "uk" // твої підтримувані мови
+type Language = "ru" | "uk" // твої підтримувані мови
 
 const LanguageContext = createContext<{
     language: Language
     setLanguage: (lang: Language) => void
 }>({
-    language: "en",
+    language: "uk",
     setLanguage: () => {},
 })
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
-    const [language, setLanguage] = useState<Language>("en")
+    const [language, setLanguage] = useState<Language>("uk")
     return (
         <LanguageContext.Provider value={{ language, setLanguage }}>
             {children}

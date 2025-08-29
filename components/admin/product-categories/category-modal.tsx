@@ -1,272 +1,389 @@
 "use client"
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Upload, ChevronRight, Expand } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs"
+
+import { trpc } from "@/utils/trpc"
+import { useLanguage } from "@/context/language-context"
 
 interface CategoryModalProps {
-  item?: any
   isOpen: boolean
   onClose: () => void
   mode: "add" | "edit"
-  parentCategory?: string
+  defaultParentId?: string | null
+  defaultBrandId?: string | null
+  defaultCategoryId?: string
+  onSuccess?: () => void
 }
 
-export function CategoryModal({ item, isOpen, onClose, mode, parentCategory }: CategoryModalProps) {
-  const [activeTab, setActiveTab] = useState("basics")
-  const [navigationSubTab, setNavigationSubTab] = useState("category")
-  const [showBrandSelector, setShowBrandSelector] = useState(false)
-  const [selectedBrand, setSelectedBrand] = useState("")
-  const [categoryLevel1, setCategoryLevel1] = useState("")
-  const [categoryLevel2, setCategoryLevel2] = useState("")
+interface CategoryNode {
+  id: string
+  name: string
+  children: CategoryNode[]
+}
 
-  const [formData, setFormData] = useState({
-    name: item?.name || "",
-    slug: item?.slug || "",
-    description: item?.description || "",
-    parentCategory: parentCategory || item?.parentCategory || "none",
-    sortOrder: item?.sortOrder || "",
-    isActive: item?.isActive ?? true,
+export function CategoryModal({
+                                isOpen,
+                                onClose,
+                                mode,
+                                defaultParentId = null,
+                                defaultBrandId = "",
+                                defaultCategoryId,
+                                onSuccess,
+                              }: CategoryModalProps) {
+  const { language } = useLanguage()
+  const [brandId, setBrandId] = useState<string>(defaultBrandId || "")
+  const [selectedBrandName, setSelectedBrandName] = useState<string>("")
+  const [categoryPath, setCategoryPath] = useState<string[]>(
+      defaultParentId ? [defaultParentId] : []
+  )
+  const [fillInError, setFillInError] = useState<boolean>(false)
+
+  const [translations, setTranslations] = useState<Record<string, { type: string; description: string }>>({
+    uk: { type: "", description: "" },
+    ru: { type: "", description: "" },
   })
 
-  const brands = [
-    { id: 1, name: "Apple", logo: "/apple-logo-minimalist.png" },
-    { id: 2, name: "Samsung", logo: "/samsung-logo.png" },
-    { id: 3, name: "Xiaomi", logo: "/xiaomi-logo.png" },
-    { id: 4, name: "Sony", logo: "/sony-logo.png" },
-    { id: 5, name: "LG", logo: "/lg-logo-abstract.png" },
-    { id: 6, name: "Huawei", logo: "/abstract-petal-design.png" },
-  ]
+  const { data: brands = [] } = trpc.adminBrand.getAllBrands.useQuery()
+  const { data: allCategories = [] } =
+      trpc.adminCategory.getAllFlatCategories.useQuery({ lang: language })
 
-  const categories = {
-    "": [],
-    electronics: [
-      { id: "smartphones", name: "Смартфони" },
-      { id: "laptops", name: "Ноутбуки" },
-      { id: "tablets", name: "Планшети" },
-    ],
-    smartphones: [
-      { id: "android", name: "Android" },
-      { id: "ios", name: "iOS" },
-    ],
-    laptops: [
-      { id: "gaming", name: "Ігрові" },
-      { id: "business", name: "Бізнес" },
-    ],
+  const { data: oneCategory } = trpc.adminCategory.getCategoryById.useQuery(
+      { catId: defaultCategoryId! },
+      { enabled: mode === "edit" && !!defaultCategoryId }
+  )
+
+  const utils = trpc.useUtils()
+  const createMutation = trpc.adminCategory.createCategory.useMutation({
+    onSuccess: async () => {
+      await utils.adminCategory.getAllFlatCategories.invalidate()
+      if (onSuccess) await onSuccess()
+    },
+  })
+  const updateMutation = trpc.adminCategory.updateCategory.useMutation({
+    onSuccess: async () => {
+      await utils.adminCategory.getAllFlatCategories.invalidate()
+      if (onSuccess) await onSuccess()
+    },
+  })
+
+  useEffect(() => {
+    if (!oneCategory) return
+
+    setBrandId(oneCategory.brandId ?? "")
+
+    const updatedTranslations = { ru: { type: "", description: "" }, uk: { type: "", description: "" } }
+    for (const lang of ["ru", "uk"]) {
+      const t = oneCategory.translations.find(tr => tr.languageCode === lang)
+      if (t) {
+        updatedTranslations[lang as "ru" | "uk"] = {
+          type: t.type || "",
+          description: t.description || "",
+        }
+      }
+    }
+    setTranslations(updatedTranslations)
+
+    if (oneCategory.parentId) {
+      const path = findPathToParent(oneCategory.parentId, allCategories)
+      setCategoryPath(path)
+    } else {
+      setCategoryPath([])
+    }
+  }, [oneCategory, allCategories])
+
+  useEffect(() => {
+    const brand = brands.find((b) => b.id === brandId)
+    setSelectedBrandName(brand?.name || "")
+  }, [brandId, brands])
+
+  useEffect(() => {
+    if (mode === "add" && defaultParentId && allCategories.length > 0) {
+      const path = findPathToParent(defaultParentId, allCategories)
+      setCategoryPath(path)
+    }
+  }, [mode, defaultParentId, allCategories])
+
+  function findPathToParent(
+      parentId: string,
+      categories: { id: string; parentId: string | null }[]
+  ): string[] {
+    const map = new Map<string, string | null>()
+    categories.forEach(cat => {
+      map.set(cat.id, cat.parentId)
+    })
+
+    const path: string[] = []
+    let current: string | null = parentId
+    while (current) {
+      path.unshift(current)
+      current = map.get(current) ?? null
+    }
+
+    return path
   }
+
+  const buildTree = () => {
+    const map = new Map<string, CategoryNode>()
+    const roots: CategoryNode[] = []
+
+    for (const cat of allCategories) {
+      map.set(cat.id, { id: cat.id, name: cat.type, children: [] })
+    }
+
+    for (const cat of allCategories) {
+      const node = map.get(cat.id)!
+      if (cat.parentId) {
+        const parent = map.get(cat.parentId)
+        parent?.children.push(node)
+      } else {
+        roots.push(node)
+      }
+    }
+
+    return roots
+  }
+
+  const handleCategoryChange = (level: number, newId: string | null) => {
+    if (newId === null) {
+      setCategoryPath(categoryPath.slice(0, level))
+    } else {
+      const updatedPath = [...categoryPath.slice(0, level), newId]
+      setCategoryPath(updatedPath)
+    }
+  }
+
+  const renderCategorySelectors = () => {
+    const tree = buildTree()
+    const selectors = []
+    let currentLevel = tree
+
+    for (let level = 0; ; level++) {
+      const selectedId = categoryPath[level] || null
+      selectors.push(
+          <Select
+              key={level}
+              value={selectedId ?? "none"}
+              onValueChange={(val) =>
+                  handleCategoryChange(level, val === "none" ? null : val)
+              }
+          >
+            <SelectTrigger className="mt-2">
+              <SelectValue placeholder="Оберіть категорію" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">—</SelectItem>
+              {currentLevel.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+      )
+
+      const selectedNode = currentLevel.find((cat) => cat.id === selectedId)
+      if (!selectedNode || selectedNode.children.length === 0) break
+      currentLevel = selectedNode.children
+    }
+
+    return selectors
+  }
+
+  const parentId = categoryPath.at(-1) ?? null
+
+  const isBrandSelectable = !!parentId
+  const inheritedBrandId = allCategories.find((c) => c.id === parentId)?.brandId
+  const brandSelectDisabled = !isBrandSelectable || !!inheritedBrandId
+
+  useEffect(() => {
+    if (inheritedBrandId) {
+      setBrandId(inheritedBrandId)
+    }
+  }, [inheritedBrandId])
+
+  const isValid = translations.uk.type.trim() !== ""
 
   const handleSave = () => {
-    console.log("Save category:", formData)
-    onClose()
+    if (!isValid) return
+
+    const translationArray = []
+
+// Украинский — обязателен
+    translationArray.push({
+      languageCode: "uk",
+      type: translations.uk.type,
+      description: translations.uk.description
+    })
+
+    const hasEnTranslation =
+        translations.ru.type.trim() !== "" ||
+        translations.ru.description.trim() !== ""
+
+    if (hasEnTranslation) {
+      if (translations.ru.type.trim() === "") {
+        setFillInError(true)
+        return
+      }
+      else {
+        setFillInError(false)
+      }
+
+      translationArray.push({
+        languageCode: "ru",
+        type: translations.ru.type,
+        description: translations.ru.description,
+      })
+    }
+
+    if (mode === "add") {
+      createMutation.mutate({
+        parentId: parentId ?? null,
+        brandId: brandId || null,
+        translations: translationArray
+      })
+    }
+    if (mode === "edit" && defaultCategoryId) {
+      updateMutation.mutate({
+        catId: defaultCategoryId,
+        brandId: brandId || null,
+        translations: translationArray,
+      })
+    }
   }
 
-  const title = mode === "add" ? "Додати нову категорію" : "Зміна даних категорії"
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl h-[600px] flex flex-col">
-        <DialogHeader className="pb-4">
-          <DialogTitle className="text-lg font-medium">{title}</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            {mode === "add" ? "Створіть нову категорію для вашого каталогу." : "Оновіть інформацію про категорію."}
-          </p>
-        </DialogHeader>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {mode === "add" ? "Створити категорію" : "Редагувати категорію"}
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-2 bg-muted/30">
-              <TabsTrigger value="basics" className="text-sm">
-                Основне
-              </TabsTrigger>
-              <TabsTrigger value="navigation" className="text-sm">
-                Навігація
-              </TabsTrigger>
+          <Tabs defaultValue="details" className="mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="details">Назва й опис</TabsTrigger>
+              <TabsTrigger value="structure">Бренд і категорія</TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-hidden mt-4">
-              <TabsContent value="basics" className="h-full overflow-y-auto space-y-4 m-0 pr-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name" className="text-sm font-medium">
-                      Назва категорії *
-                    </Label>
-                    <Input
-                      id="name"
-                      placeholder="Назва категорії"
-                      value={formData.name}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="slug" className="text-sm font-medium">
-                      Слаг
-                    </Label>
-                    <Input
-                      id="slug"
-                      placeholder="category-slug"
-                      value={formData.slug}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="description" className="text-sm font-medium">
-                    Опис
-                  </Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Опис категорії..."
-                    value={formData.description}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                    className="mt-1 min-h-[120px] resize-none"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium">Зображення категорії</Label>
-                  <div className="mt-2 border-2 border-dashed border-gray-200 rounded-lg p-6 text-center bg-gray-50/50">
-                    <Upload className="mx-auto h-6 w-6 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 mb-1">Натисніть для завантаження або перетягніть</p>
-                    <p className="text-xs text-gray-500">PNG, JPG, GIF до 5МБ</p>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="navigation" className="h-full overflow-y-auto m-0 pr-2">
-                <Tabs value={navigationSubTab} onValueChange={setNavigationSubTab} className="h-full flex flex-col">
-                  <TabsList className="grid w-full grid-cols-2 bg-muted/30 mb-4">
-                    <TabsTrigger value="category" className="text-sm">
-                      Категорія
-                    </TabsTrigger>
-                    <TabsTrigger value="brand" className="text-sm">
-                      Бренд
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="category" className="flex-1 space-y-4 m-0">
-                    <div>
-                      <Label className="text-sm font-medium mb-3 block">Батьківська категорія</Label>
-                      <div className="flex items-center space-x-3">
-                        <Select value={categoryLevel1} onValueChange={setCategoryLevel1}>
-                          <SelectTrigger className="w-48">
-                            <SelectValue placeholder="Оберіть категорію" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Без батьківської категорії</SelectItem>
-                            <SelectItem value="electronics">Електроніка</SelectItem>
-                            <SelectItem value="clothing">Одяг</SelectItem>
-                            <SelectItem value="accessories">Аксесуари</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        {categoryLevel1 && categoryLevel1 !== "none" && (
-                          <>
-                            <ChevronRight className="h-4 w-4 text-gray-400" />
-                            <Select value={categoryLevel2} onValueChange={setCategoryLevel2}>
-                              <SelectTrigger className="w-48">
-                                <SelectValue placeholder="Підкатегорія" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories[categoryLevel1]?.map((cat) => (
-                                  <SelectItem key={cat.id} value={cat.id}>
-                                    {cat.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="sortOrder" className="text-sm font-medium">
-                        Порядок сортування
-                      </Label>
-                      <Input
-                        id="sortOrder"
-                        type="number"
-                        placeholder="0"
-                        value={formData.sortOrder}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, sortOrder: e.target.value }))}
-                        className="mt-1 w-48"
-                      />
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="brand" className="flex-1 space-y-4 m-0">
-                    <div>
-                      <Label className="text-sm font-medium">Пов'язаний бренд</Label>
-                      <div className="relative mt-1">
-                        <Input
-                          placeholder="Пошук бренду..."
-                          value={selectedBrand}
-                          onChange={(e) => setSelectedBrand(e.target.value)}
-                          className="pr-10 w-64"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-1 top-1 h-7 w-7 p-0"
-                          onClick={() => setShowBrandSelector(true)}
-                        >
-                          <Expand className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </TabsContent>
-            </div>
-          </Tabs>
-        </div>
-
-        <div className="flex justify-end space-x-3 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Скасувати
-          </Button>
-          <Button onClick={handleSave} className="bg-teal-600 hover:bg-teal-700">
-            {mode === "add" ? "Додати" : "Зберегти"} категорію
-          </Button>
-        </div>
-      </DialogContent>
-
-      {showBrandSelector && (
-        <Dialog open={showBrandSelector} onOpenChange={setShowBrandSelector}>
-          <DialogContent className="max-w-2xl h-[500px]">
-            <DialogHeader>
-              <DialogTitle>Оберіть бренд</DialogTitle>
-            </DialogHeader>
-            <div className="flex-1 overflow-y-auto">
-              <div className="grid grid-cols-3 gap-4 p-4">
-                {brands.map((brand) => (
-                  <div
-                    key={brand.id}
-                    className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                    onClick={() => {
-                      setSelectedBrand(brand.name)
-                      setShowBrandSelector(false)
-                    }}
-                  >
-                    <img src={brand.logo || "/placeholder.svg"} alt={brand.name} className="w-12 h-12 mb-2" />
-                    <span className="text-sm font-medium">{brand.name}</span>
-                  </div>
-                ))}
+            <TabsContent value="details" className="mt-4">
+              <div>
+                <Label>Назва укр. (згенеровано)</Label>
+                <Input
+                    value={`${translations["uk"].type} ${selectedBrandName}`.trim()}
+                    readOnly
+                    className="bg-muted cursor-not-allowed"
+                />
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-    </Dialog>
+
+              <div className="mt-2">
+                <Label>Назва рус. (згенеровано)</Label>
+                <Input
+                    value={`${translations["ru"].type} ${selectedBrandName}`.trim()}
+                    readOnly
+                    className="bg-muted cursor-not-allowed"
+                />
+              </div>
+
+              {Object.entries(translations).map(([lang, val]) => (
+                  <div key={lang} className="mt-4">
+                    <Label>
+                      Тип ({lang.toUpperCase()})
+                      {lang === "uk" && <span className="text-red-500 ml-1">*</span>}
+                    </Label>
+                    <Input
+                        value={val.type}
+                        onChange={(e) =>
+                            setTranslations((prev) => ({
+                              ...prev,
+                              [lang]: { ...prev[lang], type: e.target.value },
+                            }))
+                        }
+                        placeholder="Введіть тип категорії"
+                    />
+
+                    {lang === "ru" && fillInError && (
+                        <p className="text-sm text-red-500 mt-1">
+                          Якщо заповнено опис російскою, потрібно вказати і назву.
+                        </p>
+                    )}
+
+                    <Label className="mt-2">
+                      Опис ({lang.toUpperCase()})
+                    </Label>
+                    <Input
+                        value={val.description}
+                        onChange={(e) =>
+                            setTranslations((prev) => ({
+                              ...prev,
+                              [lang]: { ...prev[lang], description: e.target.value },
+                            }))
+                        }
+                        placeholder="Введіть опис категорії"
+                    />
+                  </div>
+              ))}
+            </TabsContent>
+
+            <TabsContent value="structure" className="mt-4">
+              <div>
+                <Label>Бренд</Label>
+                <Select
+                    value={brandId}
+                    onValueChange={setBrandId}
+                    disabled={brandSelectDisabled}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                        placeholder={brandSelectDisabled ? "Автоматично" : "Оберіть бренд"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {brands.map((brand) => (
+                        <SelectItem key={brand.id} value={brand.id}>
+                          {brand.name}
+                        </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="mt-4">
+                <Label>Батьківська категорія</Label>
+                {renderCategorySelectors()}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-end mt-6">
+            <Button onClick={handleSave} disabled={!isValid}>
+              {mode === "add" ? "Створити" : "Зберегти"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
   )
 }

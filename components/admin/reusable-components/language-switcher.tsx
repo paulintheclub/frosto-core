@@ -12,8 +12,8 @@ export const LanguageSwitcher = () => {
                 <SelectValue placeholder="Мова" />
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="en">Англ</SelectItem>
-                <SelectItem value="uk">Укр</SelectItem>
+                <SelectItem value="uk">Українська</SelectItem>
+                <SelectItem value="ru">Русский</SelectItem>
             </SelectContent>
         </Select>
     )

@@ -40,6 +40,11 @@ export function ProductsCategoriesSection() {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<"add" | "edit">("add")
+
+  const [categoryDefaultParentId, setCategoryDefaultParentId] = useState<string | null>(null)
+  const [categoryDefaultBrandId, setCategoryDefaultBrandId] = useState<string | null>(null)
+  const [categoryDefaultCategoryId, setCategoryDefaultCategoryId] = useState<string | undefined>()
+
   const { language } = useLanguage()
 
   const { data: rootCategories, refetch } = trpc.adminCategory.getRootCategories.useQuery(
@@ -100,7 +105,9 @@ export function ProductsCategoriesSection() {
   const handleEdit = (item: TableItem) => {
     setEditItem(item)
     setModalMode("edit")
+    setCategoryDefaultCategoryId(item.id)
     item.type === "product" ? setIsProductModalOpen(true) : setIsCategoryModalOpen(true)
+
   }
 
   const handleAddProduct = () => {
@@ -109,9 +116,12 @@ export function ProductsCategoriesSection() {
     setIsProductModalOpen(true)
   }
 
-  const handleAddCategory = () => {
+  const handleAddCategory = (parentId?: string | null) => {
     setEditItem(null)
     setModalMode("add")
+    setCategoryDefaultParentId(parentId || null)
+    setCategoryDefaultBrandId(null)
+    setCategoryDefaultCategoryId(undefined)
     setIsCategoryModalOpen(true)
   }
 
@@ -134,7 +144,7 @@ export function ProductsCategoriesSection() {
               <Plus className="h-4 w-4 mr-2" />
               Додати продукт
             </Button>
-            <Button onClick={handleAddCategory}>
+            <Button onClick={() => handleAddCategory(null)}>
               <Plus className="h-4 w-4 mr-2" />
               Додати категорію
             </Button>
@@ -185,11 +195,16 @@ export function ProductsCategoriesSection() {
 
         {isCategoryModalOpen && (
             <CategoryModal
-                item={editItem}
                 isOpen={isCategoryModalOpen}
                 onClose={() => setIsCategoryModalOpen(false)}
                 mode={modalMode}
-                type="category"
+                defaultParentId={categoryDefaultParentId}
+                defaultBrandId={categoryDefaultBrandId ?? ""}
+                defaultCategoryId={categoryDefaultCategoryId}
+                onSuccess={async () => {
+                  await refetch()
+                  setIsCategoryModalOpen(false)
+                }}
             />
         )}
       </div>

@@ -6,9 +6,8 @@ import {TrpcProvider} from "@/app/providers/trpc-provider";
 import { LanguageProvider } from '@/context/language-context';
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: 'Frosto Core',
+  description: 'Created by Futurio',
 }
 
 export default function RootLayout({
