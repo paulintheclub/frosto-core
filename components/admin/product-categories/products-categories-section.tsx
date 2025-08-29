@@ -36,7 +36,6 @@ export function ProductsCategoriesSection() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [isFilterPopupOpen, setIsFilterPopupOpen] = useState(false)
   const [editItem, setEditItem] = useState<TableItem | null>(null)
-  const [data, setData] = useState<TableItem[]>([])
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<"add" | "edit">("add")
@@ -47,19 +46,8 @@ export function ProductsCategoriesSection() {
 
   const { language } = useLanguage()
 
-  const { data: rootCategories, refetch } = trpc.adminCategory.getRootCategories.useQuery(
-      { lang: language }
-  )
+  const { data: rootCategories, refetch } = trpc.adminCategory.getRootCategories.useQuery()
 
-  useEffect(() => {
-    refetch()
-  }, [language])
-
-  useEffect(() => {
-    if (rootCategories) {
-      setData(rootCategories)
-    }
-  }, [rootCategories])
 
   const stats: StatItem[] = [
     {

@@ -181,6 +181,7 @@ CREATE TABLE "public"."CategoryTranslation" (
     "id" TEXT NOT NULL,
     "categoryId" TEXT NOT NULL,
     "languageCode" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "description" TEXT,
 

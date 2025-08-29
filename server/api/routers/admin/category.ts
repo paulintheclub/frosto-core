@@ -9,21 +9,25 @@ const inputWithLang = z.object({
 export const categoryRouter = createTRPCRouter({
 
     getRootCategories: publicProcedure
-        .input(inputWithLang)
-        .query(async ({ input, ctx }) => {
-            const langCode = input.lang
+        .query(async ({ ctx }) => {
             const categories = await ctx.prisma.category.findMany({
                 where: { parentId: null },
                 include: {
                     translations: {
-                        where: { languageCode: langCode },
-                        select: { type: true, description: true },
+                        select: {
+                            name: true,
+                            description: true,
+                            languageCode: true,
+                        },
                     },
                     brand: {
                         select: { name: true },
                     },
                     _count: {
-                        select: { children: true },
+                        select: {
+                            children: true,
+                            products: true
+                        },
                     },
                 },
             })
@@ -31,9 +35,9 @@ export const categoryRouter = createTRPCRouter({
             return categories.map((cat) => ({
                 id: cat.id,
                 type: "category",
-                name: cat.translations[0]?.type || "Без назви",
-                description: cat.translations[0]?.description || "",
+                translations: cat.translations,
                 subcategoriesCount: cat._count.children,
+                productCount: cat._count.products,
                 brand: cat.brand?.name || "",
                 isEndCategory: cat._count.children === 0,
                 level: 0,
@@ -44,22 +48,26 @@ export const categoryRouter = createTRPCRouter({
         .input(z.object({
             parentId: z.string(),
             level: z.number().default(0),
-            lang: z.string().min(2).max(5),
         }))
         .query(async ({ input, ctx }) => {
-            const langCode = input.lang
             const categories = await ctx.prisma.category.findMany({
                 where: { parentId: input.parentId },
                 include: {
                     translations: {
-                        where: { languageCode: langCode },
-                        select: { type: true, description: true },
+                        select: {
+                            name: true,
+                            description: true,
+                            languageCode: true,
+                        },
                     },
                     brand: {
                         select: { name: true },
                     },
                     _count: {
-                        select: { children: true },
+                        select: {
+                            children: true,
+                            products: true
+                        },
                     },
                 },
             })
@@ -67,9 +75,9 @@ export const categoryRouter = createTRPCRouter({
             return categories.map((cat) => ({
                 id: cat.id,
                 type: "category",
-                name: cat.translations[0]?.type || "Без назви",
-                description: cat.translations[0]?.description || "",
+                translations: cat.translations,
                 subcategoriesCount: cat._count.children,
+                productCount: cat._count.products,
                 brand: cat.brand?.name || "",
                 isEndCategory: cat._count.children === 0,
                 level: input.level + 1,
@@ -80,10 +88,20 @@ export const categoryRouter = createTRPCRouter({
         .input(z.object({ lang: z.string().min(2).max(5) }))
         .query(async ({ input, ctx }) => {
             const categories = await ctx.prisma.category.findMany({
+                where: {
+                    products: {
+                        none: {},
+                    },
+                },
                 include: {
                     translations: {
                         where: { languageCode: input.lang },
                         select: { type: true },
+                    },
+                    _count: {
+                        select: {
+                            children: true,
+                        },
                     },
                 },
             })
@@ -162,6 +180,7 @@ export const categoryRouter = createTRPCRouter({
                     brandId,
                     translations: {
                         create: translations.map((t) => ({
+                            name: t.type,
                             languageCode: t.languageCode,
                             type: t.type,
                             description: t.description || "",
@@ -182,6 +201,7 @@ export const categoryRouter = createTRPCRouter({
                 z.object({
                     languageCode: z.string().min(2).max(5),
                     type: z.string().min(1),
+                    name: z.string().min(1),
                     description: z.string().optional(),
                 })
             ),
@@ -238,16 +258,17 @@ export const categoryRouter = createTRPCRouter({
         .input(z.object({
             categoryId: z.string(),
             level: z.number().default(0),
-            lang: z.string().min(2).max(5),
         }))
         .query(async ({ input, ctx }) => {
-            const langCode = input.lang
             const products = await ctx.prisma.product.findMany({
                 where: { categoryId: input.categoryId },
                 include: {
                     translations: {
-                        where: { languageCode: langCode },
-                        select: { name: true, description: true },
+                        select: {
+                            name: true,
+                            description: true,
+                            languageCode: true,
+                        },
                     },
                     category: {
                         select: {
@@ -260,9 +281,9 @@ export const categoryRouter = createTRPCRouter({
             return products.map((product) => ({
                 id: product.id,
                 type: "product" as const,
-                name: product.translations[0]?.name || "Без назви",
-                description: product.translations[0]?.description || "",
+                translations: product.translations,
                 subcategoriesCount: 0,
+                productCount: 0,
                 brand: product.category.brand?.name || "",
                 isEndCategory: true,
                 level: input.level + 1,

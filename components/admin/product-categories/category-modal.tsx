@@ -235,7 +235,8 @@ export function CategoryModal({
     translationArray.push({
       languageCode: "uk",
       type: translations.uk.type,
-      description: translations.uk.description
+      description: translations.uk.description,
+      name: translations.uk.type,
     })
 
     const hasEnTranslation =
@@ -255,6 +256,7 @@ export function CategoryModal({
         languageCode: "ru",
         type: translations.ru.type,
         description: translations.ru.description,
+        name: translations.uk.type,
       })
     }
 

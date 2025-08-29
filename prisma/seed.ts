@@ -4,7 +4,7 @@ import slugify from 'slugify'
 const prisma = new PrismaClient()
 
 async function main() {
-  // Очистка (если нужно)
+
   await prisma.product.deleteMany()
   await prisma.category.deleteMany()
   await prisma.brand.deleteMany()
@@ -59,8 +59,8 @@ async function main() {
       slug: slugify('Системи холодного зберігання', { lower: true, strict: true }),
       translations: {
         create: [
-          { languageCode: 'uk', type: 'Системи холодного зберігання', description: 'Категорія холодного зберігання' },
-          { languageCode: 'ru', type: 'Системы холодного хранения', description: 'Категория холодного хранения' },
+          { languageCode: 'uk', type: 'Системи холодного зберігання', name: 'Системи холодного зберігання', description: 'Категорія холодного зберігання' },
+          { languageCode: 'ru', type: 'Системы холодного хранения', name: 'Системы холодного хранения', description: 'Категория холодного хранения' },
         ],
       },
     },
@@ -73,8 +73,8 @@ async function main() {
       parentId: storageCategory.id,
       translations: {
         create: [
-          { languageCode: 'uk', type: 'Морозильні камери', description: 'Морозильні установки великого обсягу' },
-          { languageCode: 'ru', type: 'Морозильные камеры', description: 'Морозильные установки большого объема' },
+          { languageCode: 'uk', type: 'Морозильні камери', name: 'Морозильні камери Nordfrost',  description: 'Морозильні установки великого обсягу' },
+          { languageCode: 'ru', type: 'Морозильные камеры', name: 'Морозильные камеры Nordfrost', description: 'Морозильные установки большого объема' },
         ],
       },
     },
@@ -87,8 +87,8 @@ async function main() {
       parentId: storageCategory.id,
       translations: {
         create: [
-          { languageCode: 'uk', type: 'Охолоджуючі контейнери', description: 'Контейнери для зберігання продуктів' },
-          { languageCode: 'ru', type: 'Охлаждающие контейнеры', description: 'Контейнеры для хранения продуктов' },
+          { languageCode: 'uk', type: 'Охолоджуючі контейнери', name: 'Охолоджуючі контейнери FrostTech', description: 'Контейнери для зберігання продуктів' },
+          { languageCode: 'ru', type: 'Охлаждающие контейнеры', name: 'Охлаждающие контейнеры FrostTech', description: 'Контейнеры для хранения продуктов' },
         ],
       },
     },
@@ -104,11 +104,13 @@ async function main() {
           {
             languageCode: 'uk',
             type: 'Контролери температури',
+            name: 'Контролери температури FrostTech',
             description: 'Категорія для цифрових термостатів, контролерів і сенсорів температури.',
           },
           {
             languageCode: 'ru',
             type: 'Контроллеры температуры',
+            name: 'Контроллеры температуры FrostTech',
             description: 'Категория для цифровых термостатов, контроллеров и датчиков температуры.',
           },
         ],

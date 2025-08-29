@@ -42,12 +42,12 @@ export function RowItem({
     const { language } = useLanguage()
 
     const { refetch: refetchSub } = trpc.adminCategory.getSubcategories.useQuery(
-        { parentId: item.id, level: item.level + 1, lang: language },
+        { parentId: item.id, level: item.level + 1},
         { enabled: false }
     )
 
     const { refetch: refetchProd } = trpc.adminCategory.getProductsByCategoryId.useQuery(
-        { categoryId: item.id, level: item.level + 1, lang: language },
+        { categoryId: item.id, level: item.level + 1},
         { enabled: false }
     )
 
@@ -61,6 +61,20 @@ export function RowItem({
 
     const hasChildren = item.type === "category"
     const paddingLeft = depth * 24
+
+    const getTranslation = (item: TableItem) => {
+        const translation = item.translations.find(t => t.languageCode === language)
+            ?? item.translations[0] // fallback, если активного языка нет
+
+        return {
+            name: translation?.name ?? "(Без назви)",
+            description: translation?.description ?? "",
+        }
+    }
+
+    const { name, description } = getTranslation(item)
+
+    console.log(item);
 
     return (
         <>
@@ -80,11 +94,11 @@ export function RowItem({
                         ) : (
                             <Package className="h-4 w-4 text-muted-foreground" />
                         )}
-                        <span className="font-medium truncate">{item.name}</span>
+                        <span className="font-medium truncate">{name}</span>
 
                         {item.type === "category" && (
                             <>
-                                {onAddSubcategory && (
+                                {onAddSubcategory && item.productCount === 0 && (
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -119,13 +133,13 @@ export function RowItem({
 
                 {/* Остальные колонки остаются без сдвига */}
                 <div className="flex-1 min-w-0 px-4 hidden md:block">
-                    <div className="text-sm text-muted-foreground truncate">{item.description}</div>
+                    <div className="text-sm text-muted-foreground truncate">{description}</div>
                 </div>
 
                 <div className="w-32 px-4 text-center hidden lg:block">
-    <span className="text-sm text-muted-foreground">
-      {item.type === "category" ? item.subcategoriesCount : "0"}
-    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {item.type === "category" ? item.subcategoriesCount : "0"}
+                    </span>
                 </div>
 
                 <div className="w-24 px-4 hidden xl:block">

@@ -229,6 +229,7 @@ model CategoryTranslation {
   id           String  @id @default(cuid())
   categoryId   String
   languageCode String
+  name         String
   type         String
   description  String?
 

@@ -4,6 +4,7 @@
 import { useState } from "react"
 import type { TableItem } from "@/types/table"
 import { RowItem } from "./row-item"
+import {useLanguage} from "@/context/language-context";
 
 interface ProductsTableProps {
     rootCategories: TableItem[] | undefined
@@ -26,17 +27,19 @@ export function HierarchyTable({
                                    onAddSubcategory,
                                    onAddProduct
                                }: ProductsTableProps) {
-    const filterData = (items: TableItem[]): TableItem[] => {
-        if (!searchTerm) return items
-        return items.filter(
-            (item) =>
-                item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.brand.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-    }
+    const { language } = useLanguage()
 
-    const filteredData = rootCategories ? filterData(rootCategories) : []
+    const getTranslation = (item: TableItem) =>
+        item.translations.find(t => t.languageCode === language) ?? item.translations[0] ?? { type: "", description: "" }
+
+    const filteredData = rootCategories?.filter((item) => {
+        const { name, description } = getTranslation(item)
+        return (
+            name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.brand.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+    }) || []
 
     return (
         <div className="border border-border rounded-lg overflow-hidden">
