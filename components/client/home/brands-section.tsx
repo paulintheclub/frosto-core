@@ -1,25 +1,59 @@
 "use client"
 
+import { trpc } from "@/utils/trpc"
 import { Button } from '@/components/ui/button'
+import { BrandsSkeleton } from '@/components/ui/loading-skeleton'
+import { InlineError } from '@/components/ui/error-boundary'
+import Link from 'next/link'
 
-export default function BrandsSection() {
-  const brands = [
-    { id: 1, name: 'Bitzer', logo: 'CT', href: '/brands-control/cooltech', logoUrl: '/img.png' },
-    { id: 2, name: 'Frascold', logo: 'FP', href: '/brands-control/frostpro', logoUrl: '/img_1.png' },
-    { id: 3, name: 'Copeland', logo: 'AS', href: '/brands-control/arcticsystems', logoUrl: '/img_2.png' },
-    { id: 4, name: 'Danfoss', logo: 'CM', href: '/brands-control/chillmaster', logoUrl: '/img_3.png' },
-    { id: 5, name: 'Bock', logo: 'IF', href: '/brands-control/iceflow', logoUrl: '/img_4.png' },
-    { id: 6, name: 'CryoTech', logo: 'CR', href: '/brands-control/cryotech' },
-    { id: 7, name: 'FreezePro', logo: 'FZ', href: '/brands-control/freezepro' },
-    { id: 8, name: 'ColdChain', logo: 'CC', href: '/brands-control/coldchain' },
-    { id: 9, name: 'ThermalPro', logo: 'TP', href: '/brands-control/thermalpro' },
-    { id: 10, name: 'FrostGuard', logo: 'FG', href: '/brands-control/frostguard' },
-    { id: 11, name: 'ChillCore', logo: 'CC', href: '/brands-control/chillcore' },
-    { id: 12, name: 'IceMaster', logo: 'IM', href: '/brands-control/icemaster' },
-    { id: 13, name: 'CoolFlow', logo: 'CF', href: '/brands-control/coolflow' },
-    { id: 14, name: 'ArcticPro', logo: 'AP', href: '/brands-control/arcticpro' },
-    { id: 15, name: 'FreezeMax', logo: 'FM', href: '/brands-control/freezemax' },
-  ]
+interface BrandsSectionProps {
+  lang?: string
+}
+
+export default function BrandsSection({ lang = "uk" }: BrandsSectionProps) {
+  const { data: brands, isLoading, error, refetch } = trpc.brand.getAllBrands.useQuery({
+    lang,
+  })
+
+  if (error) {
+    return (
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Brands We Work With
+            </h2>
+            <p className="text-lg text-gray-600">
+              Trusted partnerships with leading refrigeration equipment manufacturers
+            </p>
+          </div>
+          <InlineError 
+            error={error} 
+            reset={() => refetch()} 
+            className="py-8"
+          />
+        </div>
+      </section>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Brands We Work With
+            </h2>
+            <p className="text-lg text-gray-600">
+              Trusted partnerships with leading refrigeration equipment manufacturers
+            </p>
+          </div>
+          <BrandsSkeleton />
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className="py-16 bg-white">
@@ -33,31 +67,42 @@ export default function BrandsSection() {
           </p>
         </div>
 
-        {/* Brand grid - 5 columns, 3 rows */}
+        {/* Brand grid - responsive columns */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
-          {brands.map((brand, index) => (
-            <div key={index} className="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition-shadow">
-              {brand.logoUrl ? (
-                  <img
-                      src={brand.logoUrl}
-                      alt={`${brand.name} logo`}
-                      className="w-16 h-16 mx-auto mb-4 object-contain"
-                  />
-              ) : (
-                  <div className="w-20 h-20 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-700 transition-colors">
-                      <span className="text-white font-bold text-xl">
-                        {brand.logo}
-                      </span>
-                  </div>
-              )}
-              <h3 className="font-semibold text-gray-900 text-sm">{brand.name}</h3>
-            </div>
+          {brands?.map((brand) => (
+            <Link key={brand.id} href={brand.href} className="group">
+              <div className="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition-shadow group-hover:bg-gray-100">
+                <img
+                  src={brand.logo}
+                  alt={`${brand.name} logo`}
+                  className="w-16 h-16 mx-auto mb-4 object-contain"
+                  onError={(e) => {
+                    // Fallback to text if image fails
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                    const parent = target.parentElement
+                    if (parent) {
+                      const fallback = document.createElement('div')
+                      fallback.className = 'w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-700 transition-colors'
+                      fallback.innerHTML = `<span class="text-white font-bold text-lg">${brand.name.slice(0, 2).toUpperCase()}</span>`
+                      parent.insertBefore(fallback, target)
+                    }
+                  }}
+                />
+                <h3 className="font-semibold text-gray-900 text-sm">{brand.name}</h3>
+                {brand.categoriesCount > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {brand.categoriesCount} categories
+                  </p>
+                )}
+              </div>
+            </Link>
           ))}
         </div>
 
         <div className="text-center">
-          <Button variant="outline" size="lg">
-            View All Brands
+          <Button variant="outline" size="lg" asChild>
+            <Link href="/brands">View All Brands</Link>
           </Button>
         </div>
       </div>
