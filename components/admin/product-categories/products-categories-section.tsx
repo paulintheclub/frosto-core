@@ -34,7 +34,7 @@ interface StatItem {
 
 export function ProductsCategoriesSection() {
 
-
+  const [categotyToUpdate, setCategotyToUpdate] = useState<string>("")
   const [searchTerm, setSearchTerm] = useState("")
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [isFilterPopupOpen, setIsFilterPopupOpen] = useState(false)
@@ -55,18 +55,31 @@ export function ProductsCategoriesSection() {
   const { language } = useLanguage()
 
   const { data: rootCategories, refetch } = trpc.adminCategory.getRootCategories.useQuery()
+  
 
   const deleteProductMutation = trpc.adminProduct.deleteProduct.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       await utils.adminCategory.getRootCategories.invalidate()
+
+      if (data?.parentId) {
+        setCategotyToUpdate(data.parentId)
+        setTimeout(() => setCategotyToUpdate(""), 300)
+      }
+
       setDeleteModalOpen(false)
       setItemToDelete(null)
     },
   })
 
   const deleteCategoryMutation = trpc.adminCategory.deleteCategory.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       await utils.adminCategory.getRootCategories.invalidate()
+
+      if (data?.parentId) {
+        setCategotyToUpdate(data.parentId)
+        setTimeout(() => setCategotyToUpdate(""), 300)
+      }
+
       setDeleteModalOpen(false)
       setItemToDelete(null)
     },
@@ -153,6 +166,7 @@ export function ProductsCategoriesSection() {
   }
 
 
+
   return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -205,6 +219,7 @@ export function ProductsCategoriesSection() {
             onDelete={handleDelete}
             onAddSubcategory={handleAddCategory}
             onAddProduct={handleAddProduct}
+            categoryToUpdate={categotyToUpdate}
         />
 
         {isProductModalOpen && (
@@ -214,8 +229,17 @@ export function ProductsCategoriesSection() {
                 mode={modalMode}
                 defaultProductId={productDefaultProductId}
                 defaultParentId={categoryDefaultParentId}
-                onSuccess={async () => {
+                onSuccess={async (parentId) => {
                   await refetch()
+
+                  if (parentId) {
+                    setCategotyToUpdate(parentId)
+
+                    setTimeout(() => {
+                      setCategotyToUpdate("")
+                    }, 300)
+                  }
+
                   setIsProductModalOpen(false)
                 }}
             />
@@ -230,8 +254,17 @@ export function ProductsCategoriesSection() {
                 defaultParentId={categoryDefaultParentId}
                 defaultBrandId={categoryDefaultBrandId ?? ""}
                 defaultCategoryId={categoryDefaultCategoryId}
-                onSuccess={async () => {
+                onSuccess={async (parentId) => {
                   await refetch()
+
+                  if (parentId) {
+                    setCategotyToUpdate(parentId)
+
+                    setTimeout(() => {
+                      setCategotyToUpdate("")
+                    }, 300)
+                  }
+
                   setIsCategoryModalOpen(false)
                 }}
             />

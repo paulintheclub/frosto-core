@@ -30,7 +30,7 @@ interface ProductModalProps {
   mode: "add" | "edit"
   defaultProductId?: string
   defaultParentId?: string | null
-  onSuccess?: () => void
+  onSuccess?: (parentId: string | null) => void
 }
 
 export function ProductModal({
@@ -75,8 +75,8 @@ export function ProductModal({
   const utils = trpc.useUtils()
   const createMutation = trpc.adminProduct.createProduct.useMutation({
     onSuccess: async () => {
-      await utils.adminProduct.invalidate()
-      if (onSuccess) await onSuccess()
+        await utils.adminProduct.invalidate()
+        if (onSuccess) onSuccess(categoryId)
     },
     onError: (error) => {
       if (error.data?.code === "BAD_REQUEST") {
@@ -88,7 +88,7 @@ export function ProductModal({
   const updateMutation = trpc.adminProduct.updateProduct.useMutation({
     onSuccess: async () => {
       await utils.adminProduct.invalidate()
-      if (onSuccess) await onSuccess()
+      if (onSuccess) onSuccess(categoryId)
     },
     onError: (error) => {
       if (error.data?.code === "BAD_REQUEST") {

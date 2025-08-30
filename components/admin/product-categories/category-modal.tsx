@@ -37,7 +37,7 @@ interface CategoryModalProps {
   defaultParentId?: string | null
   defaultBrandId?: string | null
   defaultCategoryId?: string
-  onSuccess?: () => void
+  onSuccess?: (parentId: string | null) => void
 }
 
 export function CategoryModal({
@@ -75,13 +75,13 @@ export function CategoryModal({
   const createMutation = trpc.adminCategory.createCategory.useMutation({
     onSuccess: async () => {
       await utils.adminCategory.getAllFlatCategories.invalidate()
-      if (onSuccess) await onSuccess()
+      if (onSuccess) onSuccess(parentId)
     },
   })
   const updateMutation = trpc.adminCategory.updateCategory.useMutation({
     onSuccess: async () => {
       await utils.adminCategory.getAllFlatCategories.invalidate()
-      if (onSuccess) await onSuccess()
+      if (onSuccess) onSuccess(parentId)
     },
   })
 

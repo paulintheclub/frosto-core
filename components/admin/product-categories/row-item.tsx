@@ -1,7 +1,7 @@
 // components/admin/product-categories/row-item.tsx
 "use client"
 
-import { useState } from "react"
+import {useEffect, useState} from "react"
 import { trpc } from "@/utils/trpc"
 import type { TableItem } from "@/types/table"
 import { Badge } from "@/components/ui/badge"
@@ -24,6 +24,7 @@ export interface RowItemProps {
     onDelete: (item: TableItem) => void
     onAddSubcategory?: (parentId: string) => void
     onAddProduct?: (parentId: string) => void
+    categoryToUpdate?: string
 }
 
 export function RowItem({
@@ -35,10 +36,14 @@ export function RowItem({
                             onEdit,
                             onDelete,
                             onAddSubcategory,
-                            onAddProduct
+                            onAddProduct,
+                            categoryToUpdate,
                         }: RowItemProps) {
     const [openMenuId, setOpenMenuId] = useState<string | null>(null)
     const [children, setChildren] = useState<TableItem[]>([])
+
+
+
     const { language } = useLanguage()
 
     const { refetch: refetchSub } = trpc.adminCategory.getSubcategories.useQuery(
@@ -54,6 +59,17 @@ export function RowItem({
     const isDeletable =
         item.type === "product" ||
         (item.type === "category" && item.subcategoriesCount === 0 && item.productCount === 0)
+
+    useEffect(() => {
+        const refreshChildren = async () => {
+            const [subs, prods] = await Promise.all([refetchSub(), refetchProd()])
+            setChildren([...(subs.data ?? []), ...(prods.data ?? [])])
+        }
+
+        if (isExpanded && categoryToUpdate === item.id) {
+            refreshChildren()
+        }
+    }, [categoryToUpdate, isExpanded])
 
     const handleExpand = async () => {
         if (!isExpanded) {
@@ -78,8 +94,8 @@ export function RowItem({
 
     const { name, description } = getTranslation(item)
 
-
-
+    console.log("Rendering RowItem for:", name);
+    console.log(categoryToUpdate);
 
     return (
         <>
@@ -205,6 +221,7 @@ export function RowItem({
                             onDelete={onDelete}
                             onAddSubcategory={onAddSubcategory}
                             onAddProduct={onAddProduct}
+                            categoryToUpdate={categoryToUpdate}
                         />
                     ))}
                 </div>

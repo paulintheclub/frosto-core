@@ -15,6 +15,7 @@ interface ProductsTableProps {
     onDelete: (item: TableItem) => void
     onAddSubcategory?: (parentId: string) => void
     onAddProduct?: (parentId: string) => void
+    categoryToUpdate?: string
 }
 
 export function HierarchyTable({
@@ -25,7 +26,8 @@ export function HierarchyTable({
                                    onEdit,
                                    onDelete,
                                    onAddSubcategory,
-                                   onAddProduct
+                                   onAddProduct,
+                                   categoryToUpdate,
                                }: ProductsTableProps) {
     const { language } = useLanguage()
 
@@ -74,6 +76,7 @@ export function HierarchyTable({
                                 onDelete={onDelete}
                                 onAddSubcategory={onAddSubcategory}
                                 onAddProduct={onAddProduct}
+                                categoryToUpdate={categoryToUpdate}
                             />
                         ))
                     ) : (

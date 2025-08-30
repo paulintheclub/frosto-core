@@ -266,14 +266,14 @@ export const productRouter = createTRPCRouter({
 
             const product = await ctx.prisma.product.findUnique({
                 where: { id: productId },
-                select: { id: true },
+                select: { id: true, categoryId: true  },
             })
 
             if (!product) throw new Error("Продукт не знайдено")
 
             await ctx.prisma.product.delete({ where: { id: productId } })
 
-            return { success: true }
+            return { success: true, parentId: product.categoryId }
         })
 
 

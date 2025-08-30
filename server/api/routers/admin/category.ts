@@ -287,23 +287,18 @@ export const categoryRouter = createTRPCRouter({
             })
         )
         .mutation(async ({ input, ctx }) => {
-
-            const { categoryId } = input
-
             const category = await ctx.prisma.category.findUnique({
-                where: { id: categoryId },
-                select: { id: true },
+                where: { id: input.categoryId },
+                select: { id: true, parentId: true },
             })
 
             if (!category) throw new Error("Категорію не знайдено")
 
             await ctx.prisma.category.delete({
-                where: {
-                    id: input.categoryId,
-                },
+                where: { id: input.categoryId },
             })
 
-            return { success: true }
+            return { success: true, parentId: category.parentId }
         }),
 
     getProductsByCategoryId: publicProcedure
