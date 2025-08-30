@@ -21,28 +21,19 @@ export const brandRouter = createTRPCRouter({
         },
       })
 
-      return brands.map((brand: any) => {
-        // Fallback: сначала искомый язык, потом любой доступный
-        let translation = brand.translations.find((t: any) => t.languageCode === lang)
-        if (!translation && brand.translations.length > 0) {
-          translation = brand.translations[0]
-        }
-
-        return {
+      return brands.map((brand) => ({
           id: brand.id,
           name: brand.name,
           slug: brand.slug,
           logo: brand.logo,
-          description: translation?.description || "",
-        }
-      })
+          description: brand.translations,
+      }))
     }),
 
   // Информация о бренде для страницы бренда (с категориями, без продуктов)
   getBrandBySlug: publicProcedure
     .input(z.object({
       slug: z.string(),
-      lang: z.string().min(2).max(5).default("uk"),
     }))
     .query(async ({ input, ctx }) => {
       const { slug, lang } = input

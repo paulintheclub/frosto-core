@@ -52,7 +52,7 @@ export function HierarchyTable({
             <div className="bg-muted/50 border-b border-border">
                 <div className="flex items-center py-3 px-4 font-medium text-sm">
                     <div className="flex-1 min-w-0 px-4">Назва</div>
-                    <div className="flex-1 min-w-0 px-4 hidden md:block">Опис</div>
+                    {/*<div className="flex-1 min-w-0 px-4 hidden md:block">Опис</div>*/}
                     <div className="w-32 px-4 text-center hidden lg:block">Кількість підкатегорій</div>
                     <div className="w-24 px-4 hidden xl:block">Бренд</div>
                     <div className="w-32 px-4 hidden lg:block">Тип</div>

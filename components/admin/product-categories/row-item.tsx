@@ -153,9 +153,9 @@ export function RowItem({
                 </div>
 
                 {/* Остальные колонки остаются без сдвига */}
-                <div className="flex-1 min-w-0 px-4 hidden md:block">
-                    <div className="text-sm text-muted-foreground truncate">{description}</div>
-                </div>
+                {/*<div className="flex-1 min-w-0 px-4 hidden md:block">*/}
+                {/*    <div className="text-sm text-muted-foreground truncate">{description}</div>*/}
+                {/*</div>*/}
 
                 <div className="w-32 px-4 text-center hidden lg:block">
                     <span className="text-sm text-muted-foreground">

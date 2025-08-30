@@ -4,33 +4,23 @@ import { publicProcedure, createTRPCRouter } from "@/server/api/trpc/trpc"
 export const categoryRouter = createTRPCRouter({
   // Простой список корневых категорий для навигации
   getRootCategories: publicProcedure
-    .input(z.object({
-      lang: z.string().min(2).max(5).default("uk"),
-    }))
-    .query(async ({ input, ctx }) => {
-      const { lang } = input
-      
+    .query(async ({ ctx }) => {
+
       const categories = await ctx.prisma.category.findMany({
         where: { parentId: null },
         include: {
           translations: {
-            select: { type: true, languageCode: true },
+            select: { name: true, description: true, languageCode: true },
           },
         },
         orderBy: { id: 'asc' },
       })
 
-      return categories.map((category: any) => {
-        // Fallback: сначала искомый язык, потом любой доступный
-        let translation = category.translations.find((t: any) => t.languageCode === lang)
-        if (!translation && category.translations.length > 0) {
-          translation = category.translations[0] // Fallback на первый доступный
-        }
-
+      return categories.map((cat) => {
         return {
-          id: category.id,
-          slug: category.slug,
-          name: translation?.type || "No name",
+          id: cat.id,
+          slug: cat.slug,
+          translations: cat.translations,
         }
       })
     }),
@@ -39,19 +29,19 @@ export const categoryRouter = createTRPCRouter({
   getCategoryBySlug: publicProcedure
     .input(z.object({
       slug: z.string(),
-      lang: z.string().min(2).max(5).default("uk"),
     }))
     .query(async ({ input, ctx }) => {
-      const { slug, lang } = input
+      const { slug } = input
       
       const category = await ctx.prisma.category.findUnique({
         where: { slug },
         include: {
           translations: {
-            select: { type: true, description: true, languageCode: true },
+            select: { name: true, type: true, description: true, languageCode: true },
           },
           children: {
             include: {
+              // TODO: брать slug для ссылок на подкатегории
               translations: {
                 select: { type: true, languageCode: true },
               },
