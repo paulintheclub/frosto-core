@@ -96,7 +96,7 @@ export const categoryRouter = createTRPCRouter({
                 include: {
                     translations: {
                         where: { languageCode: input.lang },
-                        select: { type: true },
+                        select: { name: true },
                     },
                     _count: {
                         select: {
@@ -109,8 +109,34 @@ export const categoryRouter = createTRPCRouter({
             return categories.map((cat) => ({
                 id: cat.id,
                 parentId: cat.parentId,
-                type: cat.translations[0]?.type || "Без назви",
+                name: cat.translations[0]?.name || "Без назви",
                 brandId: cat.brandId,
+            }))
+        }),
+
+    getAllFlatCategoriesForProduct: publicProcedure
+        .input(z.object({ lang: z.string().min(2).max(5) }))
+        .query(async ({ input, ctx }) => {
+            const categories = await ctx.prisma.category.findMany({
+                include: {
+                    translations: {
+                        where: { languageCode: input.lang },
+                        select: { name: true },
+                    },
+                    _count: {
+                        select: {
+                            children: true,
+                        },
+                    },
+                },
+            })
+
+            return categories.map((cat) => ({
+                id: cat.id,
+                parentId: cat.parentId,
+                name: cat.translations[0]?.name || "Без назви",
+                brandId: cat.brandId,
+                isEndCategory: cat._count.children === 0,
             }))
         }),
 
@@ -250,6 +276,32 @@ export const categoryRouter = createTRPCRouter({
                     },
                 })
             }
+
+            return { success: true }
+        }),
+
+    deleteCategory: publicProcedure
+        .input(
+            z.object({
+                categoryId: z.string().min(1),
+            })
+        )
+        .mutation(async ({ input, ctx }) => {
+
+            const { categoryId } = input
+
+            const category = await ctx.prisma.category.findUnique({
+                where: { id: categoryId },
+                select: { id: true },
+            })
+
+            if (!category) throw new Error("Категорію не знайдено")
+
+            await ctx.prisma.category.delete({
+                where: {
+                    id: input.categoryId,
+                },
+            })
 
             return { success: true }
         }),

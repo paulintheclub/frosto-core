@@ -12,7 +12,7 @@ interface ProductsTableProps {
     expandedItems: Set<string>
     onToggleExpanded: (id: string) => void
     onEdit: (item: TableItem) => void
-    onDelete: (id: string) => void
+    onDelete: (item: TableItem) => void
     onAddSubcategory?: (parentId: string) => void
     onAddProduct?: (parentId: string) => void
 }
@@ -29,6 +29,7 @@ export function HierarchyTable({
                                }: ProductsTableProps) {
     const { language } = useLanguage()
 
+
     const getTranslation = (item: TableItem) =>
         item.translations.find(t => t.languageCode === language) ?? item.translations[0] ?? { type: "", description: "" }
 
@@ -40,6 +41,8 @@ export function HierarchyTable({
             item.brand.toLowerCase().includes(searchTerm.toLowerCase())
         )
     }) || []
+
+
 
     return (
         <div className="border border-border rounded-lg overflow-hidden">

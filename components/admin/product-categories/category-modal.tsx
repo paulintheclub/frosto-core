@@ -25,6 +25,8 @@ import {
   TabsContent,
 } from "@/components/ui/tabs"
 
+import { CategorySelector } from "@/components/admin/product-categories/category-selector"
+
 import { trpc } from "@/utils/trpc"
 import { useLanguage } from "@/context/language-context"
 
@@ -36,12 +38,6 @@ interface CategoryModalProps {
   defaultBrandId?: string | null
   defaultCategoryId?: string
   onSuccess?: () => void
-}
-
-interface CategoryNode {
-  id: string
-  name: string
-  children: CategoryNode[]
 }
 
 export function CategoryModal({
@@ -145,72 +141,6 @@ export function CategoryModal({
     return path
   }
 
-  const buildTree = () => {
-    const map = new Map<string, CategoryNode>()
-    const roots: CategoryNode[] = []
-
-    for (const cat of allCategories) {
-      map.set(cat.id, { id: cat.id, name: cat.type, children: [] })
-    }
-
-    for (const cat of allCategories) {
-      const node = map.get(cat.id)!
-      if (cat.parentId) {
-        const parent = map.get(cat.parentId)
-        parent?.children.push(node)
-      } else {
-        roots.push(node)
-      }
-    }
-
-    return roots
-  }
-
-  const handleCategoryChange = (level: number, newId: string | null) => {
-    if (newId === null) {
-      setCategoryPath(categoryPath.slice(0, level))
-    } else {
-      const updatedPath = [...categoryPath.slice(0, level), newId]
-      setCategoryPath(updatedPath)
-    }
-  }
-
-  const renderCategorySelectors = () => {
-    const tree = buildTree()
-    const selectors = []
-    let currentLevel = tree
-
-    for (let level = 0; ; level++) {
-      const selectedId = categoryPath[level] || null
-      selectors.push(
-          <Select
-              key={level}
-              value={selectedId ?? "none"}
-              onValueChange={(val) =>
-                  handleCategoryChange(level, val === "none" ? null : val)
-              }
-          >
-            <SelectTrigger className="mt-2">
-              <SelectValue placeholder="Оберіть категорію" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">—</SelectItem>
-              {currentLevel.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-      )
-
-      const selectedNode = currentLevel.find((cat) => cat.id === selectedId)
-      if (!selectedNode || selectedNode.children.length === 0) break
-      currentLevel = selectedNode.children
-    }
-
-    return selectors
-  }
 
   const parentId = categoryPath.at(-1) ?? null
 
@@ -239,11 +169,11 @@ export function CategoryModal({
       name: translations.uk.type,
     })
 
-    const hasEnTranslation =
+    const hasRuTranslation =
         translations.ru.type.trim() !== "" ||
         translations.ru.description.trim() !== ""
 
-    if (hasEnTranslation) {
+    if (hasRuTranslation) {
       if (translations.ru.type.trim() === "") {
         setFillInError(true)
         return
@@ -256,7 +186,7 @@ export function CategoryModal({
         languageCode: "ru",
         type: translations.ru.type,
         description: translations.ru.description,
-        name: translations.uk.type,
+        name: translations.ru.type,
       })
     }
 
@@ -375,7 +305,11 @@ export function CategoryModal({
 
               <div className="mt-4">
                 <Label>Батьківська категорія</Label>
-                {renderCategorySelectors()}
+                <CategorySelector
+                    categoryPath={categoryPath}
+                    onChange={setCategoryPath}
+                    disabled={mode === "edit" && !!defaultCategoryId} // опционально
+                />
               </div>
             </TabsContent>
           </Tabs>

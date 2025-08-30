@@ -20,6 +20,7 @@ import { CategoryModal } from "@/components/admin/product-categories/category-mo
 import { trpc } from "@/utils/trpc"
 import { TableItem } from "@/types/table"
 import {useLanguage} from "@/context/language-context";
+import {ConfirmDeleteModal} from "@/components/admin/product-categories/confirm-delete-modal";
 
 interface StatItem {
   label: string
@@ -32,10 +33,11 @@ interface StatItem {
 
 
 export function ProductsCategoriesSection() {
+
+
   const [searchTerm, setSearchTerm] = useState("")
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [isFilterPopupOpen, setIsFilterPopupOpen] = useState(false)
-  const [editItem, setEditItem] = useState<TableItem | null>(null)
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<"add" | "edit">("add")
@@ -43,10 +45,47 @@ export function ProductsCategoriesSection() {
   const [categoryDefaultParentId, setCategoryDefaultParentId] = useState<string | null>(null)
   const [categoryDefaultBrandId, setCategoryDefaultBrandId] = useState<string | null>(null)
   const [categoryDefaultCategoryId, setCategoryDefaultCategoryId] = useState<string | undefined>()
+  const [productDefaultProductId, setProductDefaultProductId] = useState<string | undefined>()
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: string } | null>(null)
+
+  const utils = trpc.useUtils()
 
   const { language } = useLanguage()
 
   const { data: rootCategories, refetch } = trpc.adminCategory.getRootCategories.useQuery()
+
+  const deleteProductMutation = trpc.adminProduct.deleteProduct.useMutation({
+    onSuccess: async () => {
+      await utils.adminCategory.getRootCategories.invalidate()
+      setDeleteModalOpen(false)
+      setItemToDelete(null)
+    },
+  })
+
+  const deleteCategoryMutation = trpc.adminCategory.deleteCategory.useMutation({
+    onSuccess: async () => {
+      await utils.adminCategory.getRootCategories.invalidate()
+      setDeleteModalOpen(false)
+      setItemToDelete(null)
+    },
+  })
+
+  const handleDelete = (item: TableItem) => {
+    setItemToDelete({ id: item.id, type: item.type })
+    setDeleteModalOpen(true)
+  }
+
+  const confirmDelete = () => {
+    if (!itemToDelete) return
+
+    if (itemToDelete.type === "product") {
+      deleteProductMutation.mutate({ productId: itemToDelete.id })
+    } else {
+      deleteCategoryMutation.mutate({ categoryId: itemToDelete.id })
+    }
+  }
 
 
   const stats: StatItem[] = [
@@ -91,21 +130,21 @@ export function ProductsCategoriesSection() {
   }
 
   const handleEdit = (item: TableItem) => {
-    setEditItem(item)
     setModalMode("edit")
-    setCategoryDefaultCategoryId(item.id)
+    item.type === "product" ? setProductDefaultProductId(item.id) : setCategoryDefaultCategoryId(item.id)
     item.type === "product" ? setIsProductModalOpen(true) : setIsCategoryModalOpen(true)
-
   }
 
-  const handleAddProduct = () => {
-    setEditItem(null)
+  const handleAddProduct = (parentId?: string | null) => {
     setModalMode("add")
+    setCategoryDefaultParentId(parentId || null)
+
     setIsProductModalOpen(true)
+
+
   }
 
   const handleAddCategory = (parentId?: string | null) => {
-    setEditItem(null)
     setModalMode("add")
     setCategoryDefaultParentId(parentId || null)
     setCategoryDefaultBrandId(null)
@@ -113,9 +152,6 @@ export function ProductsCategoriesSection() {
     setIsCategoryModalOpen(true)
   }
 
-  const handleDelete = (id: string) => {
-    console.log("Delete item:", id)
-  }
 
   return (
       <div className="space-y-6">
@@ -128,7 +164,7 @@ export function ProductsCategoriesSection() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-foreground">Продукти та категорії</h1>
           <div className="flex gap-2">
-            <Button onClick={handleAddProduct}>
+            <Button onClick={() => handleAddProduct(null)}>
               <Plus className="h-4 w-4 mr-2" />
               Додати продукт
             </Button>
@@ -173,12 +209,17 @@ export function ProductsCategoriesSection() {
 
         {isProductModalOpen && (
             <ProductModal
-                item={editItem}
                 isOpen={isProductModalOpen}
                 onClose={() => setIsProductModalOpen(false)}
                 mode={modalMode}
-                type="product"
+                defaultProductId={productDefaultProductId}
+                defaultParentId={categoryDefaultParentId}
+                onSuccess={async () => {
+                  await refetch()
+                  setIsProductModalOpen(false)
+                }}
             />
+
         )}
 
         {isCategoryModalOpen && (
@@ -195,6 +236,14 @@ export function ProductsCategoriesSection() {
                 }}
             />
         )}
+
+        <ConfirmDeleteModal
+            isOpen={deleteModalOpen}
+            onClose={() => setDeleteModalOpen(false)}
+            onConfirm={confirmDelete}
+            itemName={itemToDelete?.type === "category" ? "категорію" : "продукт"}
+        />
+
       </div>
   )
 }

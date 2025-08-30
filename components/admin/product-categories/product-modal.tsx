@@ -1,424 +1,378 @@
+// components/admin/products/product-modal.tsx
 "use client"
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Upload, Plus, X, ChevronRight, Expand } from "lucide-react"
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { trpc } from "@/utils/trpc"
+import { useLanguage } from "@/context/language-context"
+
+import { ImageUploadField } from "@/components/admin/reusable-components/image-upload-field"
+import {ProductCategorySelector} from "@/components/admin/product-categories/product-category-selector";
 
 interface ProductModalProps {
-  item?: any
   isOpen: boolean
   onClose: () => void
   mode: "add" | "edit"
-  type: "product" | "category"
+  defaultProductId?: string
+  defaultParentId?: string | null
+  onSuccess?: () => void
 }
 
-export function ProductModal({ item, isOpen, onClose, mode, type }: ProductModalProps) {
-  const [activeTab, setActiveTab] = useState("basics")
-  const [relationsSubTab, setRelationsSubTab] = useState("related-products")
-  const [showBrandSelector, setShowBrandSelector] = useState(false)
-  const [selectedBrand, setSelectedBrand] = useState("")
-  const [categoryLevel1, setCategoryLevel1] = useState("")
-  const [categoryLevel2, setCategoryLevel2] = useState("")
-  const [categoryLevel3, setCategoryLevel3] = useState("")
+export function ProductModal({
+                               isOpen,
+                               onClose,
+                               mode,
+                               defaultProductId,
+                               defaultParentId,
+                               onSuccess,
+                             }: ProductModalProps) {
+  const { language } = useLanguage()
+  const [fillInError, setFillInError] = useState<boolean>(false)
+ const [unkownProduct, setUnkownProduct] = useState<boolean>(false)
+  const [skuError, setSkuError] = useState<boolean>(false)
 
-  const [formData, setFormData] = useState({
-    name: item?.name || "",
-    slug: item?.slug || "",
-    sku: item?.sku || "",
-    price: item?.price || "",
-    availability: item?.availability || "В наявності",
-    brand: item?.brand || "",
-    description: item?.description || "",
-    accessories: item?.accessories || "",
-    relatedProducts: item?.relatedProducts || [],
+  const [brandName, setBrandName] = useState<string>("")
+  const [sku, setSku] = useState("")
+  const [mainImage, setMainImage] = useState("")
+  const [gallery, setGallery] = useState<string[]>([])
+  const [price, setPrice] = useState<number>(0)
+  const [isDiscounted, setIsDiscounted] = useState(false)
+  const [discountPrice, setDiscountPrice] = useState<number | undefined>()
+  const [availability, setAvailability] = useState<"IN_STOCK" | "ON_ORDER">("IN_STOCK")
+  const [categoryId, setCategoryId] = useState<string | null>(defaultParentId ?? null)
+
+  const [mainChar, setMainChar] = useState("")
+  const [techCharImage, setTechCharImage] = useState("")
+  const [expCharImage, setExpCharImage] = useState("")
+  const [sizeConnectionsImage, setSizeConnectionsImage] = useState("")
+  const [accessoriesImage, setAccessoriesImage] = useState("")
+
+  const [translations, setTranslations] = useState<Record<string, { name: string; description: string }>>({
+    uk: { name: "", description: "" },
+    ru: { name: "", description: "" },
   })
 
-  const brands = [
-    { id: 1, name: "Apple", logo: "/apple-logo-minimalist.png" },
-    { id: 2, name: "Samsung", logo: "/samsung-logo.png" },
-    { id: 3, name: "Xiaomi", logo: "/xiaomi-logo.png" },
-    { id: 4, name: "Sony", logo: "/sony-logo.png" },
-    { id: 5, name: "LG", logo: "/lg-logo-abstract.png" },
-    { id: 6, name: "Huawei", logo: "/abstract-petal-design.png" },
-  ]
+  const { data: oneProduct } = trpc.adminProduct.getProductById.useQuery(
+      { productId: defaultProductId! },
+      { enabled: mode === "edit" && !!defaultProductId }
+  )
 
-  const categories = {
-    "": [],
-    electronics: [
-      { id: "smartphones", name: "Смартфони" },
-      { id: "laptops", name: "Ноутбуки" },
-      { id: "tablets", name: "Планшети" },
-    ],
-    smartphones: [
-      { id: "android", name: "Android" },
-      { id: "ios", name: "iOS" },
-    ],
-    laptops: [
-      { id: "gaming", name: "Ігрові" },
-      { id: "business", name: "Бізнес" },
-    ],
-  }
+  const utils = trpc.useUtils()
+  const createMutation = trpc.adminProduct.createProduct.useMutation({
+    onSuccess: async () => {
+      await utils.adminProduct.invalidate()
+      if (onSuccess) await onSuccess()
+    },
+    onError: (error) => {
+      if (error.data?.code === "BAD_REQUEST") {
+        setSkuError(true)
+      }
+    },
+  })
 
-  const [relatedProducts] = useState([
-    { id: 1, name: "Бездротова миша", sku: "WM-001" },
-    { id: 2, name: "USB-C хаб", sku: "UCH-002" },
-  ])
+  const updateMutation = trpc.adminProduct.updateProduct.useMutation({
+    onSuccess: async () => {
+      await utils.adminProduct.invalidate()
+      if (onSuccess) await onSuccess()
+    },
+    onError: (error) => {
+      if (error.data?.code === "BAD_REQUEST") {
+        setSkuError(true)
+      }
+      else if (error.data?.code === "NOT_FOUND") {
+        setUnkownProduct(true)
+      }
+
+    },
+  })
+
+  const { data: parentCategory } = trpc.adminCategory.getCategoryById.useQuery(
+      { catId: defaultParentId! },
+      { enabled: mode === "add" && !!defaultParentId }
+  )
+
+  useEffect(() => {
+
+    console.log(parentCategory);
+    if (!parentCategory) return
+
+    setBrandName(parentCategory.brand?.name ?? "")
+
+  })
+
+  useEffect(() => {
+    if (!oneProduct) return
+
+    setSku(oneProduct.sku)
+    setMainImage(oneProduct.mainImage)
+    setGallery(oneProduct.gallery)
+    setPrice(oneProduct.price)
+    setIsDiscounted(oneProduct.isDiscounted)
+    setDiscountPrice(oneProduct.discountPrice ?? undefined)
+    setAvailability(oneProduct.availability)
+    setMainChar(oneProduct.mainChar ?? "")
+    setTechCharImage(oneProduct.techCharImage ?? "")
+    setExpCharImage(oneProduct.expCharImage ?? "")
+    setSizeConnectionsImage(oneProduct.sizeConnectionsImage ?? "")
+    setAccessoriesImage(oneProduct.accessoriesImage ?? "")
+    setCategoryId(oneProduct.categoryId)
+    setBrandName(oneProduct.category?.brand?.name ?? "")
+
+    const tr: typeof translations = { uk: { name: "", description: "" }, ru: { name: "", description: "" } }
+    oneProduct.translations.forEach(t => {
+      if (t.languageCode === "uk" || t.languageCode === "ru") {
+        tr[t.languageCode] = { name: t.name, description: t.description ?? "" }
+      }
+    })
+    setTranslations(tr)
+  }, [oneProduct])
+
+
+
+  const isValid = sku.trim()
+        && translations.uk.name.trim()
+        && price > 0
+        && availability
+        && mainImage.trim()
+        && gallery.length > 0
+        && categoryId
+
 
   const handleSave = () => {
-    console.log("Save:", formData)
-    onClose()
+    if (!isValid || !categoryId) return
+
+    const translationArray = []
+
+    translationArray.push({
+      languageCode: "uk",
+      name: translations.uk.name,
+      description: translations.uk.description,
+    })
+
+    const hasRuTranslation =
+        translations.ru.name.trim() !== "" ||
+        translations.ru.description.trim() !== ""
+
+    if (hasRuTranslation) {
+      if (translations.ru.name.trim() === "") {
+        setFillInError(true)
+        return
+      }
+      else {
+        setFillInError(false)
+      }
+
+      translationArray.push({
+        languageCode: "ru",
+        description: translations.ru.description,
+        name: translations.ru.name,
+      })
+    }
+
+
+    const payload = {
+      sku,
+      mainImage,
+      gallery,
+      price,
+      isDiscounted,
+      discountPrice: isDiscounted ? discountPrice ?? 0 : null,
+      availability,
+      mainChar,
+      techCharImage,
+      expCharImage,
+      sizeConnectionsImage,
+      accessoriesImage,
+      categoryId,
+      translations: translationArray,
+    }
+
+    if (mode === "add") {
+      createMutation.mutate(payload)
+    } else if (defaultProductId) {
+      updateMutation.mutate({ productId: defaultProductId, ...payload })
+    }
   }
 
-  const title =
-    mode === "add"
-      ? type === "product"
-        ? "Додати новий продукт"
-        : "Додати нову категорію"
-      : type === "product"
-        ? "Зміна даних продукту"
-        : "Зміна даних категорії"
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[700px] flex flex-col">
-        <DialogHeader className="pb-4">
-          <DialogTitle className="text-lg font-medium">{title}</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            {mode === "add" ? "Створіть новий продукт для вашого каталогу." : "Оновіть інформацію про продукт."}
-          </p>
-        </DialogHeader>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{mode === "add" ? "Створити продукт" : "Редагувати продукт"}</DialogTitle>
+          </DialogHeader>
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-5 bg-muted/30">
-              <TabsTrigger value="basics" className="text-xs">
-                Основне
-              </TabsTrigger>
-              <TabsTrigger value="categories" className="text-xs">
-                Категорії
-              </TabsTrigger>
-              <TabsTrigger value="media" className="text-xs">
-                Медіа
-              </TabsTrigger>
-              <TabsTrigger value="content" className="text-xs">
-                Контент
-              </TabsTrigger>
-              <TabsTrigger value="relations" className="text-xs">
-                Зв'язки
-              </TabsTrigger>
+          <Tabs defaultValue="general" className="mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="general">Основне</TabsTrigger>
+              <TabsTrigger value="images">Зображення</TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-hidden mt-4">
-              <TabsContent value="basics" className="h-full overflow-y-auto space-y-4 m-0 pr-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name" className="text-sm font-medium">
-                      Назва *
-                    </Label>
-                    <Input
-                      id="name"
-                      placeholder="Назва продукту"
-                      value={formData.name}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="slug" className="text-sm font-medium">
-                      Слаг
-                    </Label>
-                    <Input
-                      id="slug"
-                      placeholder="product-slug"
-                      value={formData.slug}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
+            <TabsContent value="general" className="mt-4 space-y-3 overflow-y-auto max-h-[calc(90vh-270px)] pr-2">
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="sku" className="text-sm font-medium">
-                      Артикул
-                    </Label>
+              {Object.entries(translations).map(([lang, val]) => (
+                  <div key={lang}>
+                    <Label>Назва ({lang.toUpperCase()})</Label>
+                    {lang === "uk" && <span className="text-red-500 ml-1">*</span>}
                     <Input
-                      id="sku"
-                      placeholder="SKU-001"
-                      value={formData.sku}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, sku: e.target.value }))}
-                      className="mt-1"
+                        value={val.name}
+                        onChange={(e) =>
+                            setTranslations((prev) => ({
+                              ...prev,
+                              [lang]: { ...prev[lang], name: e.target.value },
+                            }))
+                        }
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor="price" className="text-sm font-medium">
-                      Ціна
-                    </Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      placeholder="0"
-                      value={formData.price}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="availability" className="text-sm font-medium">
-                      Наявність
-                    </Label>
-                    <Select
-                      value={formData.availability}
-                      onValueChange={(value) => setFormData((prev) => ({ ...prev, availability: value }))}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="В наявності">В наявності</SelectItem>
-                        <SelectItem value="Немає в наявності">Немає в наявності</SelectItem>
-                        <SelectItem value="Попереднє замовлення">Попереднє замовлення</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Бренд</Label>
-                    <div className="relative mt-1">
-                      <Input
-                        placeholder="Пошук бренду..."
-                        value={selectedBrand}
-                        onChange={(e) => setSelectedBrand(e.target.value)}
-                        className="pr-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-1 top-1 h-7 w-7 p-0"
-                        onClick={() => setShowBrandSelector(true)}
-                      >
-                        <Expand className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="categories" className="h-full overflow-y-auto space-y-4 m-0 pr-2">
-                <div>
-                  <Label className="text-sm font-medium mb-3 block">Ієрархія категорій</Label>
-                  <div className="flex items-center space-x-3">
-                    <Select value={categoryLevel1} onValueChange={setCategoryLevel1}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Оберіть категорію" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="electronics">Електроніка</SelectItem>
-                        <SelectItem value="clothing">Одяг</SelectItem>
-                        <SelectItem value="accessories">Аксесуари</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    {categoryLevel1 && (
-                      <>
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
-                        <Select value={categoryLevel2} onValueChange={setCategoryLevel2}>
-                          <SelectTrigger className="w-48">
-                            <SelectValue placeholder="Підкатегорія" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories[categoryLevel1]?.map((cat) => (
-                              <SelectItem key={cat.id} value={cat.id}>
-                                {cat.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </>
+                    {lang === "ru" && fillInError && (
+                        <p className="text-sm text-red-500 mt-1">
+                          Якщо заповнено опис російскою, потрібно вказати і назву.
+                        </p>
                     )}
 
-                    {categoryLevel2 && categories[categoryLevel2]?.length > 0 && (
-                      <>
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
-                        <Select value={categoryLevel3} onValueChange={setCategoryLevel3}>
-                          <SelectTrigger className="w-48">
-                            <SelectValue placeholder="Підкатегорія" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories[categoryLevel2]?.map((cat) => (
-                              <SelectItem key={cat.id} value={cat.id}>
-                                {cat.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </>
-                    )}
+                    <Label>Опис ({lang.toUpperCase()})</Label>
+                    <Input
+                        value={val.description}
+                        onChange={(e) =>
+                            setTranslations((prev) => ({
+                              ...prev,
+                              [lang]: { ...prev[lang], description: e.target.value },
+                            }))
+                        }
+                    />
                   </div>
-                </div>
-              </TabsContent>
+              ))}
 
-              <TabsContent value="media" className="h-full overflow-y-auto space-y-6 m-0 pr-2">
-                <div>
-                  <Label className="text-sm font-medium">Основне зображення</Label>
-                  <div className="mt-2 border-2 border-dashed border-gray-200 rounded-lg p-8 text-center bg-gray-50/50">
-                    <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 mb-1">Натисніть для завантаження або перетягніть</p>
-                    <p className="text-xs text-gray-500">PNG, JPG, GIF до 10МБ</p>
-                  </div>
-                </div>
+              <Label>SKU</Label>
+              <span className="text-red-500 ml-1">*</span>
+              <Input value={sku} onChange={(e) => setSku(e.target.value)} />
+              {skuError && (
+                  <p className="text-sm text-red-500 mt-1">
+                    SKU не унікальний.
+                  </p>
+              )}
 
-                <div>
-                  <Label className="text-sm font-medium">Галерея зображень</Label>
-                  <div className="mt-2 border-2 border-dashed border-gray-200 rounded-lg p-8 text-center bg-gray-50/50">
-                    <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 mb-1">Завантажте кілька зображень</p>
-                    <p className="text-xs text-gray-500">Перетягніть для зміни порядку</p>
-                  </div>
-                </div>
+              <Label>Головна характеристика</Label>
+              <Input value={mainChar} onChange={(e) => setMainChar(e.target.value)} />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium">Зображення специфікацій</Label>
-                    <div className="mt-2 border-2 border-dashed border-gray-200 rounded-lg p-6 text-center bg-gray-50/50">
-                      <Upload className="mx-auto h-6 w-6 text-gray-400 mb-1" />
-                      <p className="text-xs text-gray-600">Специфікації</p>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Зображення комплектації</Label>
-                    <div className="mt-2 border-2 border-dashed border-gray-200 rounded-lg p-6 text-center bg-gray-50/50">
-                      <Upload className="mx-auto h-6 w-6 text-gray-400 mb-1" />
-                      <p className="text-xs text-gray-600">Що входить в комплект</p>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
+              <Label>Ціна</Label>
+              <span className="text-red-500 ml-1">*</span>
+              <Input type="number" value={price} onChange={(e) => setPrice(parseFloat(e.target.value))} />
 
-              <TabsContent value="content" className="h-full overflow-y-auto space-y-4 m-0 pr-2">
-                <div>
-                  <Label htmlFor="description" className="text-sm font-medium">
-                    Опис
-                  </Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Опис продукту..."
-                    value={formData.description}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                    className="mt-1 min-h-[120px] resize-none"
-                  />
-                </div>
+              <Label>Знижка</Label>
+              <Select value={isDiscounted ? "yes" : "no"} onValueChange={(val) => setIsDiscounted(val === "yes")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Чи є знижка?" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no">Без знижки</SelectItem>
+                  <SelectItem value="yes">Є знижка</SelectItem>
+                </SelectContent>
+              </Select>
 
-                <div>
-                  <Label className="text-sm font-medium">Аксесуари</Label>
-                  <div className="mt-2 border-2 border-dashed border-gray-200 rounded-lg p-8 text-center bg-gray-50/50">
-                    <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 mb-1">Завантажте фото аксесуарів</p>
-                    <p className="text-xs text-gray-500">PNG, JPG, GIF до 10МБ</p>
-                  </div>
-                </div>
-              </TabsContent>
+              {isDiscounted && (
+                  <>
+                    <Label>Ціна зі знижкою</Label>
+                    <Input
+                        type="number"
+                        value={discountPrice ?? ""}
+                        onChange={(e) => setDiscountPrice(parseFloat(e.target.value))}
+                    />
+                  </>
+              )}
 
-              <TabsContent value="relations" className="h-full overflow-y-auto m-0 pr-2">
-                <Tabs value={relationsSubTab} onValueChange={setRelationsSubTab} className="h-full flex flex-col">
-                  <TabsList className="grid w-full grid-cols-2 bg-muted/30 mb-4">
-                    <TabsTrigger value="related-products" className="text-xs">
-                      Пов'язані продукти
-                    </TabsTrigger>
-                    <TabsTrigger value="catalogs" className="text-xs">
-                      Каталоги
-                    </TabsTrigger>
-                  </TabsList>
+              <Label>Наявність</Label>
+              <span className="text-red-500 ml-1">*</span>
+                <Select value={availability} onValueChange={(val) => setAvailability(val as "IN_STOCK" | "ON_ORDER")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="IN_STOCK">В наявності</SelectItem>
+                  <SelectItem value="ON_ORDER">Доступний на замовлення</SelectItem>
+                </SelectContent>
+              </Select>
 
-                  <TabsContent value="related-products" className="flex-1 space-y-4 m-0">
-                    <div>
-                      <h4 className="text-lg font-medium text-teal-700">Пов'язані продукти</h4>
-                      <p className="text-sm text-gray-600">Продукти, які доповнюють цей товар</p>
+              <Label>Бренд</Label>
+              <Input
+                  value={brandName}
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
+              />
 
-                      <div className="relative mt-3">
-                        <Input placeholder="Пошук за назвою або артикулом..." className="pr-10" />
-                        <Button size="sm" className="absolute right-1 top-1 h-7 w-7 p-0 bg-teal-600 hover:bg-teal-700">
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
+              <ProductCategorySelector
+                  categoryId={categoryId}
+                  onChange={setCategoryId}
+                  disabled={mode === "edit"}
+              />
+            </TabsContent>
 
-                      <div className="space-y-2 mt-4">
-                        {relatedProducts.map((product) => (
-                          <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div>
-                              <p className="font-medium text-sm">{product.name}</p>
-                              <p className="text-xs text-gray-500">{product.sku}</p>
-                            </div>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </TabsContent>
+            <TabsContent value="images" className="mt-4 space-y-3 overflow-y-auto max-h-[calc(90vh-270px)] pr-2">
+              <ImageUploadField
+                  label="Головне зображення"
+                  value={mainImage}
+                  mandatory
+                  onChange={(url) => setMainImage(Array.isArray(url) ? url[0] : url)}
+              />
 
-                  <TabsContent value="catalogs" className="flex-1 space-y-4 m-0">
-                    <div>
-                      <h4 className="text-lg font-medium text-teal-700">Каталоги</h4>
-                      <p className="text-sm text-gray-600">Каталоги, в яких відображається цей продукт</p>
+              <ImageUploadField
+                  label="Галерея"
+                  value={gallery}
+                  mandatory
+                  multiple
+                  onChange={(url) => setMainImage(Array.isArray(url) ? url[0] : url)}
+              />
+              <ImageUploadField
+                  label="Зображення тех. характеристик"
+                  value={techCharImage}
+                  onChange={(url) => setMainImage(Array.isArray(url) ? url[0] : url)}
+              />
+              <ImageUploadField
+                  label="Зображення експлуатаційних характеристик"
+                  value={expCharImage}
+                  onChange={(url) => setMainImage(Array.isArray(url) ? url[0] : url)}
+              />
+              <ImageUploadField
+                  label="Зображення розмірів"
+                  value={sizeConnectionsImage}
+                  onChange={(url) => setMainImage(Array.isArray(url) ? url[0] : url)}
+              />
+              <ImageUploadField
+                  label="Зображення аксесуарів"
+                  value={accessoriesImage}
+                  onChange={(url) => setMainImage(Array.isArray(url) ? url[0] : url)}
+              />
 
-                      <div className="mt-4 p-8 text-center text-gray-500">
-                        <p>Функціонал каталогів буде додано пізніше</p>
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </TabsContent>
-            </div>
+            </TabsContent>
+
+
           </Tabs>
-        </div>
 
-        <div className="flex justify-end space-x-3 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Скасувати
-          </Button>
-          <Button onClick={handleSave} className="bg-teal-600 hover:bg-teal-700">
-            {mode === "add" ? "Додати" : "Зберегти"} {type === "product" ? "продукт" : "категорію"}
-          </Button>
-        </div>
-      </DialogContent>
-
-      {showBrandSelector && (
-        <Dialog open={showBrandSelector} onOpenChange={setShowBrandSelector}>
-          <DialogContent className="max-w-2xl h-[500px]">
-            <DialogHeader>
-              <DialogTitle>Оберіть бренд</DialogTitle>
-            </DialogHeader>
-            <div className="flex-1 overflow-y-auto">
-              <div className="grid grid-cols-3 gap-4 p-4">
-                {brands.map((brand) => (
-                  <div
-                    key={brand.id}
-                    className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                    onClick={() => {
-                      setSelectedBrand(brand.name)
-                      setShowBrandSelector(false)
-                    }}
-                  >
-                    <img src={brand.logo || "/placeholder.svg"} alt={brand.name} className="w-12 h-12 mb-2" />
-                    <span className="text-sm font-medium">{brand.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-    </Dialog>
+          <div className="flex justify-end mt-6">
+            <Button onClick={handleSave} disabled={!isValid}>
+              {mode === "add" ? "Створити" : "Зберегти"}
+            </Button>
+            {unkownProduct && (
+            <p className="text-sm text-red-500 mt-1 ml-4">
+            Не вдалося знайти продукт. Можливо, він був видалений.
+            </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
   )
 }

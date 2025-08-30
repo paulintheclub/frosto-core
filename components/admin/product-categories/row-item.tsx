@@ -21,7 +21,7 @@ export interface RowItemProps {
     expandedItems: Set<string>
     onToggleExpanded: (id: string) => void
     onEdit: (item: TableItem) => void
-    onDelete: (id: string) => void
+    onDelete: (item: TableItem) => void
     onAddSubcategory?: (parentId: string) => void
     onAddProduct?: (parentId: string) => void
 }
@@ -51,8 +51,12 @@ export function RowItem({
         { enabled: false }
     )
 
+    const isDeletable =
+        item.type === "product" ||
+        (item.type === "category" && item.subcategoriesCount === 0 && item.productCount === 0)
+
     const handleExpand = async () => {
-        if (!isExpanded && children.length === 0) {
+        if (!isExpanded) {
             const [subs, prods] = await Promise.all([refetchSub(), refetchProd()])
             setChildren([...(subs.data ?? []), ...(prods.data ?? [])])
         }
@@ -74,7 +78,8 @@ export function RowItem({
 
     const { name, description } = getTranslation(item)
 
-    console.log(item);
+
+
 
     return (
         <>
@@ -171,11 +176,16 @@ export function RowItem({
                                 <Edit className="h-4 w-4 mr-2" /> Редагувати
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                                onClick={() => { setOpenMenuId(null); onDelete(item.id) }}
-                                className="text-destructive focus:text-destructive"
+                                onClick={() => {
+                                    if (!isDeletable) return
+                                    setOpenMenuId(null)
+                                    onDelete(item)
+                                }}
+                                className={`focus:text-destructive ${!isDeletable ? "opacity-50 pointer-events-none" : "text-destructive"}`}
                             >
-                                <Trash2 className="h-4 w-4 mr-2" /> Видалити
-                            </DropdownMenuItem>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {isDeletable ? "Видалити" : "Неможливо видалити"}
+                        </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
