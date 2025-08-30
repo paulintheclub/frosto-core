@@ -2,30 +2,27 @@ import { z } from "zod"
 import { publicProcedure, createTRPCRouter } from "@/server/api/trpc/trpc"
 
 export const productRouter = createTRPCRouter({
+  // Список продуктов с фильтрацией по категории
   getProducts: publicProcedure
     .input(z.object({
       categoryId: z.string().optional(),
       limit: z.number().min(1).max(100).default(12),
-      featured: z.boolean().default(false),
-      lang: z.string().min(2).max(5).default("uk"), // Default to Ukrainian as per seed data
+      lang: z.string().min(2).max(5).default("uk"),
     }))
     .query(async ({ input, ctx }) => {
-      const { categoryId, limit, featured, lang } = input
+      const { categoryId, limit, lang } = input
 
       const products = await ctx.prisma.product.findMany({
         where: {
           ...(categoryId && { categoryId }),
-          // You can add featured logic here if you have a featured field
-          // ...(featured && { featured: true }),
         },
         take: limit,
         orderBy: {
-          createdAt: 'desc', // Show newest products first
+          createdAt: 'desc',
         },
         include: {
           translations: {
-            where: { languageCode: lang },
-            select: { name: true, description: true },
+            select: { name: true, description: true, languageCode: true },
           },
           category: {
             select: {
@@ -37,41 +34,51 @@ export const productRouter = createTRPCRouter({
                 } 
               },
               translations: {
-                where: { languageCode: lang },
-                select: { type: true },
+                select: { type: true, languageCode: true },
               },
             },
           },
         },
       })
 
-      return products.map((product: any) => ({
-        id: product.id,
-        slug: product.slug,
-        sku: product.sku,
-        name: product.translations[0]?.name || "No name",
-        description: product.translations[0]?.description || "",
-        imageUrl: product.mainImage,
-        gallery: product.gallery,
-        price: product.isDiscounted && product.discountPrice 
-          ? product.discountPrice 
-          : product.price,
-        originalPrice: product.isDiscounted ? product.price : null,
-        isDiscounted: product.isDiscounted,
-        availability: product.availability,
-        brand: {
-          name: product.category.brand?.name || "Unknown Brand",
-          slug: product.category.brand?.slug,
-        },
-        category: {
-          name: product.category.translations[0]?.type || "No category",
-          slug: product.category.slug,
-        },
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
-      }))
+      return products.map((product: any) => {
+        // Fallback для продукта
+        let productTranslation = product.translations.find((t: any) => t.languageCode === lang)
+        if (!productTranslation && product.translations.length > 0) {
+          productTranslation = product.translations[0]
+        }
+
+        // Fallback для категории
+        let categoryTranslation = product.category.translations.find((t: any) => t.languageCode === lang)
+        if (!categoryTranslation && product.category.translations.length > 0) {
+          categoryTranslation = product.category.translations[0]
+        }
+
+        return {
+          id: product.id,
+          slug: product.slug,
+          sku: product.sku,
+          name: productTranslation?.name || "No name",
+          imageUrl: product.mainImage,
+          price: product.isDiscounted && product.discountPrice 
+            ? product.discountPrice 
+            : product.price,
+          originalPrice: product.isDiscounted ? product.price : null,
+          isDiscounted: product.isDiscounted,
+          availability: product.availability,
+          brand: {
+            name: product.category.brand?.name || "Unknown Brand",
+            slug: product.category.brand?.slug,
+          },
+          category: {
+            name: categoryTranslation?.type || "No category",
+            slug: product.category.slug,
+          },
+        }
+      })
     }),
 
+  // Полная информация о продукте для страницы продукта
   getProductBySlug: publicProcedure
     .input(z.object({
       slug: z.string(),
@@ -84,70 +91,28 @@ export const productRouter = createTRPCRouter({
         where: { slug },
         include: {
           translations: {
-            where: { languageCode: lang },
+            select: { name: true, description: true, languageCode: true },
           },
           category: {
             include: {
               brand: {
                 include: {
                   translations: {
-                    where: { languageCode: lang },
+                    select: { description: true, languageCode: true },
                   },
                 },
               },
               translations: {
-                where: { languageCode: lang },
+                select: { type: true, languageCode: true },
               },
             },
           },
           catalogs: {
             include: {
               translations: {
-                where: { languageCode: lang },
+                select: { name: true, languageCode: true },
               },
             },
-          },
-          comments: {
-            include: {
-              user: { 
-                select: { 
-                  name: true,
-                  email: true 
-                } 
-              },
-              replies: {
-                include: {
-                  user: {
-                    select: {
-                      name: true,
-                      email: true
-                    }
-                  }
-                }
-              }
-            },
-            orderBy: {
-              createdAt: 'desc'
-            }
-          },
-          relatedFrom: {
-            include: {
-              related: {
-                include: {
-                  translations: {
-                    where: { languageCode: lang },
-                  },
-                  category: {
-                    include: {
-                      brand: {
-                        select: { name: true }
-                      }
-                    }
-                  }
-                },
-              },
-            },
-            take: 6, // Limit related products
           },
         },
       })
@@ -156,10 +121,28 @@ export const productRouter = createTRPCRouter({
         throw new Error("Product not found")
       }
 
+      // Fallback для продукта
+      let productTranslation = product.translations.find((t: any) => t.languageCode === lang)
+      if (!productTranslation && product.translations.length > 0) {
+        productTranslation = product.translations[0]
+      }
+
+      // Fallback для категории
+      let categoryTranslation = product.category.translations.find((t: any) => t.languageCode === lang)
+      if (!categoryTranslation && product.category.translations.length > 0) {
+        categoryTranslation = product.category.translations[0]
+      }
+
+      // Fallback для бренда
+      let brandTranslation = product.category.brand?.translations.find((t: any) => t.languageCode === lang)
+      if (!brandTranslation && product.category.brand?.translations.length > 0) {
+        brandTranslation = product.category.brand.translations[0]
+      }
+
       return {
         id: product.id,
-        name: product.translations[0]?.name || "No name",
-        description: product.translations[0]?.description || "",
+        name: productTranslation?.name || "No name",
+        description: productTranslation?.description || "",
         sku: product.sku,
         slug: product.slug,
         mainImage: product.mainImage,
@@ -176,113 +159,34 @@ export const productRouter = createTRPCRouter({
         sizeConnectionsImage: product.sizeConnectionsImage,
         accessoriesImage: product.accessoriesImage,
         category: {
-          name: product.category.translations[0]?.type || "No category",
+          name: categoryTranslation?.type || "No category",
           slug: product.category.slug,
-          href: `/categories/${product.category.slug}`,
         },
         brand: {
           name: product.category.brand?.name || "No brand",
           slug: product.category.brand?.slug,
-          href: `/brands/${product.category.brand?.slug}`,
+          logo: product.category.brand?.logo,
+          description: brandTranslation?.description || "",
         },
-        catalogs: product.catalogs.map((catalog: any) => ({
-          id: catalog.id,
-          name: catalog.translations[0]?.name || "Catalog",
-          pdfUrl: catalog.pdfUrl,
-          previewImg: catalog.previewImg,
-        })),
-        comments: product.comments.map((comment: any) => ({
-          id: comment.id,
-          content: comment.content,
-          commentType: comment.commentType,
-          createdAt: comment.createdAt,
-          author: comment.user.name || comment.user.email || "Anonymous",
-          replies: comment.replies.map((reply: any) => ({
-            id: reply.id,
-            content: reply.content,
-            createdAt: reply.createdAt,
-            author: reply.user.name || reply.user.email || "Anonymous",
-          })),
-        })),
-        relatedProducts: product.relatedFrom.map((rel: any) => ({
-          id: rel.related.id,
-          name: rel.related.translations[0]?.name || "No name",
-          slug: rel.related.slug,
-          image: rel.related.mainImage,
-          price: rel.related.isDiscounted && rel.related.discountPrice 
-            ? rel.related.discountPrice 
-            : rel.related.price,
-          brand: rel.related.category.brand?.name || "Unknown",
-          href: `/products/${rel.related.slug}`,
-        })),
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
+        catalogs: product.catalogs.map((catalog: any) => {
+          // Fallback для каталога
+          let catalogTranslation = catalog.translations.find((t: any) => t.languageCode === lang)
+          if (!catalogTranslation && catalog.translations.length > 0) {
+            catalogTranslation = catalog.translations[0]
+          }
+
+          return {
+            id: catalog.id,
+            name: catalogTranslation?.name || "Catalog",
+            pdfUrl: catalog.pdfUrl,
+            previewImg: catalog.previewImg,
+          }
+        }),
       }
     }),
 
-  getFeaturedProducts: publicProcedure
-    .input(z.object({
-      limit: z.number().min(1).max(20).default(8),
-      lang: z.string().min(2).max(5).default("uk"),
-    }))
-    .query(async ({ input, ctx }) => {
-      const { limit, lang } = input
 
-      // Get products with recent activity or high availability
-      const products = await ctx.prisma.product.findMany({
-        where: {
-          availability: 'IN_STOCK', // Only show available products
-        },
-        take: limit,
-        orderBy: [
-          { createdAt: 'desc' }, // Newest first
-          { updatedAt: 'desc' }, // Recently updated
-        ],
-        include: {
-          translations: {
-            where: { languageCode: lang },
-            select: { name: true, description: true },
-          },
-          category: {
-            select: {
-              slug: true,
-              brand: { 
-                select: { 
-                  name: true,
-                  slug: true 
-                } 
-              },
-              translations: {
-                where: { languageCode: lang },
-                select: { type: true },
-              },
-            },
-          },
-        },
-      })
-
-      return products.map((product: any) => ({
-        id: product.id,
-        slug: product.slug,
-        name: product.translations[0]?.name || "No name",
-        imageUrl: product.mainImage,
-        price: product.isDiscounted && product.discountPrice 
-          ? product.discountPrice 
-          : product.price,
-        originalPrice: product.isDiscounted ? product.price : null,
-        isDiscounted: product.isDiscounted,
-        availability: product.availability,
-        brand: {
-          name: product.category.brand?.name || "Unknown Brand",
-          slug: product.category.brand?.slug,
-        },
-        category: {
-          name: product.category.translations[0]?.type || "No category",
-          slug: product.category.slug,
-        },
-      }))
-    }),
-
+  // Продукты по slug категории (отдельный эндпоинт)
   getProductsByCategory: publicProcedure
     .input(z.object({
       categorySlug: z.string(),
@@ -292,7 +196,7 @@ export const productRouter = createTRPCRouter({
     .query(async ({ input, ctx }) => {
       const { categorySlug, limit, lang } = input
 
-      // First find the category by slug
+      // Находим категорию по slug
       const category = await ctx.prisma.category.findUnique({
         where: { slug: categorySlug },
         select: { id: true },
@@ -312,8 +216,7 @@ export const productRouter = createTRPCRouter({
         },
         include: {
           translations: {
-            where: { languageCode: lang },
-            select: { name: true, description: true },
+            select: { name: true, description: true, languageCode: true },
           },
           category: {
             select: {
@@ -325,35 +228,48 @@ export const productRouter = createTRPCRouter({
                 } 
               },
               translations: {
-                where: { languageCode: lang },
-                select: { type: true },
+                select: { type: true, languageCode: true },
               },
             },
           },
         },
       })
 
-      return products.map((product: any) => ({
-        id: product.id,
-        slug: product.slug,
-        sku: product.sku,
-        name: product.translations[0]?.name || "No name",
-        description: product.translations[0]?.description || "",
-        imageUrl: product.mainImage,
-        price: product.isDiscounted && product.discountPrice 
-          ? product.discountPrice 
-          : product.price,
-        originalPrice: product.isDiscounted ? product.price : null,
-        isDiscounted: product.isDiscounted,
-        availability: product.availability,
-        brand: {
-          name: product.category.brand?.name || "Unknown Brand",
-          slug: product.category.brand?.slug,
-        },
-        category: {
-          name: product.category.translations[0]?.type || "No category",
-          slug: product.category.slug,
-        },
-      }))
+      return products.map((product: any) => {
+        // Fallback для продукта
+        let productTranslation = product.translations.find((t: any) => t.languageCode === lang)
+        if (!productTranslation && product.translations.length > 0) {
+          productTranslation = product.translations[0]
+        }
+
+        // Fallback для категории
+        let categoryTranslation = product.category.translations.find((t: any) => t.languageCode === lang)
+        if (!categoryTranslation && product.category.translations.length > 0) {
+          categoryTranslation = product.category.translations[0]
+        }
+
+        return {
+          id: product.id,
+          slug: product.slug,
+          sku: product.sku,
+          name: productTranslation?.name || "No name",
+          description: productTranslation?.description || "",
+          imageUrl: product.mainImage,
+          price: product.isDiscounted && product.discountPrice 
+            ? product.discountPrice 
+            : product.price,
+          originalPrice: product.isDiscounted ? product.price : null,
+          isDiscounted: product.isDiscounted,
+          availability: product.availability,
+          brand: {
+            name: product.category.brand?.name || "Unknown Brand",
+            slug: product.category.brand?.slug,
+          },
+          category: {
+            name: categoryTranslation?.type || "No category",
+            slug: product.category.slug,
+          },
+        }
+      })
     }),
 })

@@ -17,7 +17,7 @@ export const appRouter = createTRPCRouter({
     adminBrand: adminBrandRouter,
 
     // Client endpoints
-    clientRoutes: createTRPCRouter({
+    client: createTRPCRouter({
         product: clientProductRouter,
         brand: clientBrandRouter,
         category: clientCategoryRouter,

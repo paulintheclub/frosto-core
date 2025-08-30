@@ -11,7 +11,8 @@ interface BrandsSectionProps {
 }
 
 export default function BrandsSection({ lang = "uk" }: BrandsSectionProps) {
-  const { data: brands, isLoading, error, refetch } = trpc.brand.getAllBrands.useQuery({
+  // Используем новый client namespace
+  const { data: brands, isLoading, error, refetch } = trpc.client.brand.getAllBrands.useQuery({
     lang,
   })
 
@@ -70,7 +71,8 @@ export default function BrandsSection({ lang = "uk" }: BrandsSectionProps) {
         {/* Brand grid - responsive columns */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
           {brands?.map((brand) => (
-            <Link key={brand.id} href={brand.href} className="group">
+            // Генерируем href на фронтенде из slug
+            <Link key={brand.id} href={`/brands/${brand.slug}`} className="group">
               <div className="bg-gray-50 rounded-lg p-6 text-center hover:shadow-md transition-shadow group-hover:bg-gray-100">
                 <img
                   src={brand.logo}
@@ -90,9 +92,9 @@ export default function BrandsSection({ lang = "uk" }: BrandsSectionProps) {
                   }}
                 />
                 <h3 className="font-semibold text-gray-900 text-sm">{brand.name}</h3>
-                {brand.categoriesCount > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {brand.categoriesCount} categories
+                {brand.description && (
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    {brand.description}
                   </p>
                 )}
               </div>
